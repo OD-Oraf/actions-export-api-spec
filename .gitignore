@@ -47,3 +47,8 @@ exported-specs/
 # Environment variables
 .env
 .env.local
+
+
+api-specs
+openapi.yaml
+exchange.json
