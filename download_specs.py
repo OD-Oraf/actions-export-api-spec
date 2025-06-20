@@ -27,16 +27,22 @@ class AnypointExchangeClient:
         self.session = requests.Session()
         
     def authenticate(self) -> bool:
-        """Authenticate with Anypoint Platform and get access token"""
-        auth_url = f"{self.base_url}/accounts/login"
+        """Authenticate with Anypoint Platform using OAuth2 client credentials flow"""
+        # MuleSoft Anypoint Platform OAuth2 token endpoint
+        auth_url = f"{self.base_url}/accounts/api/v2/oauth2/token"
         
         payload = {
-            "username": self.client_id,
-            "password": self.client_secret
+            "grant_type": "client_credentials",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret
+        }
+        
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
         }
         
         try:
-            response = self.session.post(auth_url, json=payload)
+            response = self.session.post(auth_url, data=payload, headers=headers)
             response.raise_for_status()
             
             auth_data = response.json()
@@ -59,14 +65,15 @@ class AnypointExchangeClient:
     
     def get_organizations(self) -> List[Dict]:
         """Get list of organizations the user has access to"""
-        url = f"{self.base_url}/accounts/api/me"
+        # MuleSoft Anypoint Platform API endpoint for user profile
+        url = f"{self.base_url}/accounts/api/profile"
         
         try:
             response = self.session.get(url)
             response.raise_for_status()
             user_data = response.json()
             
-            return user_data.get("user", {}).get("memberOfOrganizations", [])
+            return user_data.get("memberOfOrganizations", [])
         except requests.exceptions.RequestException as e:
             print(f"❌ Failed to get organizations: {e}")
             return []

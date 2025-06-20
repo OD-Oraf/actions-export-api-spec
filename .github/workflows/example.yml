@@ -7,14 +7,17 @@ on:
         description: 'MuleSoft Organization ID'
         required: true
         type: string
+        default: '1bb53e2e-0362-40c7-80cc-273290c8d74b'
       asset_id:
         description: 'Specific Asset ID (optional)'
         required: false
         type: string
+        default: 'openapi'
       group_id:
         description: 'Group ID filter (optional)'
         required: false
         type: string
+        default: '1bb53e2e-0362-40c7-80cc-273290c8d74b'
   
 #  schedule:
 #    # Run every Monday at 2 AM UTC
@@ -26,14 +29,14 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Export API Specs from MuleSoft Anypoint Exchange
         uses: ./
         id: export-specs
         env:
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          CLIENT_ID: ${{  secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{  secrets.CLIENT_SECRET }}
         with:
           organization-id: ${{ github.event.inputs.organization_id || vars.MULESOFT_ORG_ID }}
           asset-id: ${{ github.event.inputs.asset_id }}

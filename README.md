@@ -11,6 +11,16 @@ A GitHub Action that downloads OpenAPI specifications, documentation, and metada
 - 📦 Stores all files as GitHub Actions artifacts
 - 🔍 Supports filtering by organization, group, and asset ID
 
+## MuleSoft API Endpoints Used
+
+This action uses the following MuleSoft Anypoint Platform API endpoints:
+
+- **Authentication**: `POST /accounts/api/v2/oauth2/token` - OAuth2 client credentials flow
+- **User Profile**: `GET /accounts/api/profile` - Get user organizations
+- **Asset Search**: `GET /exchange/api/v2/assets` - Search for assets in Exchange
+- **Asset Details**: `GET /exchange/api/v2/assets/{groupId}/{assetId}/{version}` - Get asset metadata
+- **Asset Files**: `GET /exchange/api/v2/assets/{groupId}/{assetId}/{version}/files` - Get downloadable files
+
 ## Prerequisites
 
 Before using this action, you need to:
