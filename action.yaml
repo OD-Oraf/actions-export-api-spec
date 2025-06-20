@@ -1,0 +1,82 @@
+name: 'Export API Specs from MuleSoft Anypoint Exchange'
+description: 'Downloads OpenAPI specifications, categories, tags, and documentation from MuleSoft Anypoint Exchange'
+author: 'Your Organization'
+
+inputs:
+  exchange-url:
+    description: 'MuleSoft Anypoint Exchange URL'
+    required: false
+    default: 'https://anypoint.mulesoft.com'
+  
+  organization-id:
+    description: 'MuleSoft Organization ID'
+    required: true
+  
+  asset-id:
+    description: 'Asset ID to download (optional - if not provided, downloads all assets)'
+    required: false
+  
+  group-id:
+    description: 'Group ID to filter assets (optional)'
+    required: false
+  
+  output-directory:
+    description: 'Directory to store downloaded files'
+    required: false
+    default: 'api-specs'
+  
+  include-documentation:
+    description: 'Whether to download documentation'
+    required: false
+    default: 'true'
+  
+  include-metadata:
+    description: 'Whether to download categories and tags metadata'
+    required: false
+    default: 'true'
+
+outputs:
+  specs-count:
+    description: 'Number of API specifications downloaded'
+  
+  output-path:
+    description: 'Path where files were downloaded'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install requests pyyaml
+    
+    - name: Download API specs from Anypoint Exchange
+      shell: bash
+      env:
+        CLIENT_ID: ${{ env.CLIENT_ID }}
+        CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
+        EXCHANGE_URL: ${{ inputs.exchange-url }}
+        ORGANIZATION_ID: ${{ inputs.organization-id }}
+        ASSET_ID: ${{ inputs.asset-id }}
+        GROUP_ID: ${{ inputs.group-id }}
+        OUTPUT_DIR: ${{ inputs.output-directory }}
+        INCLUDE_DOCS: ${{ inputs.include-documentation }}
+        INCLUDE_METADATA: ${{ inputs.include-metadata }}
+      run: |
+        python ${{ github.action_path }}/download_specs.py
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mulesoft-api-specs
+        path: ${{ inputs.output-directory }}
+        retention-days: 30
+
+branding:
+  icon: 'download'
+  color: 'blue'
