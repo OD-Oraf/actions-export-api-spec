@@ -95,10 +95,11 @@ class AnypointExchangeClient:
         
     def authenticate(self) -> bool:
         """Authenticate with Anypoint Platform using OAuth2 client credentials flow"""
-        # MuleSoft Anypoint Platform OAuth2 token endpoint
+
+        # MuleSoft Anypoint Platform Access Token Endpoint
         auth_url = f"{self.base_url}/accounts/api/v2/oauth2/token"
         
-        print(f"🔐 Authenticating with Anypoint Platform...")
+        print(f"🔐 Getting access token...")
         print(f"📡 POST {auth_url}")
         
         payload = {
@@ -124,7 +125,7 @@ class AnypointExchangeClient:
                     "Authorization": f"Bearer {self.access_token}",
                     "Content-Type": "application/json"
                 })
-                print("✅ Successfully authenticated with Anypoint Platform")
+                print("✅ Successfully generated Anypoint Platform access token")
                 print(f"📝 Response Body: {truncate_json_response(auth_data)}")
                 return True
             else:
@@ -419,7 +420,11 @@ def main():
             classifier = file_info.get('classifier', 'unknown')
             packaging = file_info.get('packaging', '')
             file_name = file_info.get('fileName')
-            
+
+            if classifier != 'oas':
+                print(f"⚠️ Skip downloading non-OAS file: {file_name}")
+                continue
+
             if not file_name:
                 file_name = f"{asset_asset_id}-{asset_version}-{classifier}"
                 if packaging:
