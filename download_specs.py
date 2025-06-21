@@ -393,7 +393,7 @@ def main():
         print(f"📋 Processing asset: {asset_group_id}/{asset_asset_id}:{asset_version}")
         
         # Create asset directory
-        asset_dir = output_path / f"{asset_group_id}_{asset_asset_id}_{asset_version}"
+        asset_dir = output_path / f"{asset_asset_id}_{asset_version}"
         asset_dir.mkdir(parents=True, exist_ok=True)
         
         # Get asset details
