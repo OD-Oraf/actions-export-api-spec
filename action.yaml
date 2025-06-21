@@ -119,8 +119,6 @@ runs:
           git commit -m "Update API specs, categories, and documentation from MuleSoft Anypoint Exchange"
           git push
         fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
