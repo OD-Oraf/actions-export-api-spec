@@ -1,6 +1,9 @@
 name: Example - Export API Specs from MuleSoft Exchange
 
 on:
+  push:
+    branches:
+      - develop
   workflow_dispatch:
     inputs:
       organization_id:
