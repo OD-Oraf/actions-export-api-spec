@@ -34,10 +34,21 @@ inputs:
     description: 'Whether to download categories and tags metadata'
     required: false
     default: 'true'
+  
+  repository-destination:
+    description: 'Directory in the repository where files should be moved (relative to repository root)'
+    required: false
+    default: '.'
 
 outputs:
   specs-count:
     description: 'Number of API specifications downloaded'
+  
+  docs-count:
+    description: 'Number of documentation items downloaded'
+  
+  categories-count:
+    description: 'Number of categories extracted'
   
   output-path:
     description: 'Path where files were downloaded'
@@ -53,7 +64,7 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        pip install requests pyyaml
+        pip install requests pyyaml markdownify
     
     - name: Download API specs from Anypoint Exchange
       shell: bash
@@ -70,11 +81,46 @@ runs:
       run: |
         python ${{ github.action_path }}/download_specs.py
     
+    - name: Move files to repository destination
+      shell: bash
+      run: |
+        mkdir -p ${{ inputs.repository-destination }}
+        # Move extracted OAS files, categories.json, and markdown files
+        if [ -d "${{ inputs.output-directory }}" ]; then
+          # Find and move OAS files (from extracted directories)
+          find ${{ inputs.output-directory }} -name "*.yaml" -o -name "*.yml" -o -name "*.json" | grep -E "\.(yaml|yml|json)$" | while read file; do
+            if [[ "$file" == *"_extracted/"* ]] || [[ "$file" == *"categories.json" ]]; then
+              cp "$file" ${{ inputs.repository-destination }}/
+            fi
+          done
+          
+          # Move all markdown files
+          find ${{ inputs.output-directory }} -name "*.md" -exec cp {} ${{ inputs.repository-destination }}/ \;
+          
+          # Move categories.json if it exists
+          if [ -f "${{ inputs.output-directory }}/categories.json" ]; then
+            cp ${{ inputs.output-directory }}/categories.json ${{ inputs.repository-destination }}/
+          fi
+        fi
+    
+    - name: Commit and push files
+      shell: bash
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add ${{ inputs.repository-destination }}
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Update API specs, categories, and documentation from MuleSoft Anypoint Exchange"
+          git push
+        fi
+    
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mulesoft-api-specs
-        path: ${{ inputs.output-directory }}
+        path: ${{ inputs.repository-destination }}
         retention-days: 30
 
 branding:
