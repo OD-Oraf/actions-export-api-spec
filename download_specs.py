@@ -15,6 +15,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 import time
 
+try:
+    from markdownify import markdownify as md
+    MARKDOWNIFY_AVAILABLE = True
+except ImportError:
+    MARKDOWNIFY_AVAILABLE = False
+    print("⚠️ markdownify not available - HTML content will be saved as-is")
+
 
 def truncate_json_response(response_data: Any, max_length: int = 1000) -> str:
     """Truncate JSON response for logging purposes"""
@@ -275,6 +282,103 @@ class AnypointExchangeClient:
         except requests.exceptions.RequestException as e:
             print(f"❌ Failed to download file {file_name}: {e}")
             return None
+    
+    def get_portal_info(self, group_id: str, asset_id: str, version: str) -> Optional[Dict]:
+        """Get portal information for an asset"""
+        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal"
+        
+        print(f"📖 Fetching portal info for {group_id}/{asset_id}:{version}")
+        print(f"📡 GET {url}")
+        
+        try:
+            response = self.session.get(url)
+            print(f"📊 Response Status: {response.status_code}")
+            response.raise_for_status()
+            
+            portal_data = response.json()
+            print(f"📝 Response Body: {truncate_json_response(portal_data)}")
+            print(f"✅ Successfully retrieved portal info")
+            return portal_data
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to get portal info for {asset_id}: {e}")
+            return None
+    
+    def get_portal_pages(self, group_id: str, asset_id: str, version: str) -> Optional[List[Dict]]:
+        """Get portal pages for an asset"""
+        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal/pages"
+        
+        print(f"📄 Fetching portal pages for {group_id}/{asset_id}:{version}")
+        print(f"📡 GET {url}")
+        
+        try:
+            response = self.session.get(url)
+            print(f"📊 Response Status: {response.status_code}")
+            response.raise_for_status()
+            
+            pages_data = response.json()
+            print(f"📝 Response Body: {truncate_json_response(pages_data)}")
+            
+            pages = pages_data if isinstance(pages_data, list) else pages_data.get('pages', [])
+            print(f"✅ Found {len(pages)} portal pages")
+            return pages
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to get portal pages for {asset_id}: {e}")
+            return None
+
+    def get_portal_page_content(self, group_id: str, asset_id: str, version: str, page_path: str) -> Optional[Dict]:
+        """Get content of a specific portal page using its path"""
+        # URL encode the page path to handle spaces and special characters
+        import urllib.parse
+        encoded_path = urllib.parse.quote(page_path, safe='/')
+        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal/pages/{encoded_path}"
+        
+        print(f"📄 Fetching page content for path: {page_path}")
+        print(f"📡 GET {url}")
+        
+        try:
+            response = self.session.get(url)
+            print(f"📊 Response Status: {response.status_code}")
+            response.raise_for_status()
+            
+            # Check content type and handle accordingly
+            content_type = response.headers.get('Content-Type', '').lower()
+            
+            if 'application/json' in content_type:
+                try:
+                    page_content = response.json()
+                    print(f"📝 Response Body (JSON): {truncate_json_response(page_content)}")
+                    print(f"✅ Successfully retrieved page content as JSON")
+                    return page_content
+                except ValueError as e:
+                    print(f"⚠️ Failed to parse JSON response: {e}")
+                    # Fall through to handle as text
+            
+            # Handle as text/HTML content
+            text_content = response.text
+            if text_content.strip():
+                page_content = {
+                    "path": page_path,
+                    "content_type": content_type,
+                    "content": text_content,
+                    "content_length": len(text_content)
+                }
+                print(f"📝 Response Body (Text): {text_content[:200]}{'...' if len(text_content) > 200 else ''}")
+                print(f"✅ Successfully retrieved page content as text ({len(text_content)} chars)")
+                return page_content
+            else:
+                print(f"⚠️ Empty response body for page: {page_path}")
+                return {
+                    "path": page_path,
+                    "content_type": content_type,
+                    "content": "",
+                    "error": "Empty response body"
+                }
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to get page content for path {page_path}: {e}")
+            return None
 
 
 def save_file(content: bytes, file_path: Path) -> bool:
@@ -298,6 +402,18 @@ def save_json(data: Dict, file_path: Path) -> bool:
         return True
     except Exception as e:
         print(f"❌ Failed to save JSON file {file_path}: {e}")
+        return False
+
+
+def save_markdown(content: str, file_path: Path) -> bool:
+    """Save markdown content to a file"""
+    try:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return True
+    except Exception as e:
+        print(f"❌ Failed to save markdown file {file_path}: {e}")
         return False
 
 
@@ -377,6 +493,7 @@ def main():
     
     downloaded_count = 0
     processed_count = 0
+    docs_downloaded_count = 0
     
     for i, asset in enumerate(latest_assets, 1):
         asset_group_id = asset.get('groupId')
@@ -405,6 +522,76 @@ def main():
             metadata_file = asset_dir / "metadata.json"
             save_json(asset_details, metadata_file)
             print(f"💾 Saved metadata: {metadata_file}")
+        
+        if include_docs:
+            print(f"📚 Downloading documentation for {asset_asset_id}...")
+            
+            # Get portal information
+            portal_info = client.get_portal_info(asset_group_id, asset_asset_id, asset_version)
+            if portal_info:
+                portal_file = asset_dir / "portal_info.json"
+                save_json(portal_info, portal_file)
+                print(f"💾 Saved portal info: {portal_file}")
+                docs_downloaded_count += 1
+            
+            # Get portal pages
+            portal_pages = client.get_portal_pages(asset_group_id, asset_asset_id, asset_version)
+            if portal_pages:
+                pages_file = asset_dir / "portal_pages.json"
+                save_json(portal_pages, pages_file)
+                print(f"💾 Saved portal pages: {pages_file}")
+                
+                # Save individual pages as separate files for easier access
+                pages_dir = asset_dir / "pages"
+                pages_dir.mkdir(parents=True, exist_ok=True)
+                
+                for idx, page in enumerate(portal_pages):
+                    page_title = page.get('title', f'page_{idx}')
+                    # Sanitize filename
+                    safe_title = "".join(c for c in page_title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                    safe_title = safe_title.replace(' ', '_')
+                    page_file = pages_dir / f"{safe_title}.json"
+                    save_json(page, page_file)
+                    print(f"💾 Saved page: {page_file}")
+                
+                docs_downloaded_count += len(portal_pages)
+                
+                # Download actual page content using the path field
+                for idx, page in enumerate(portal_pages):
+                    page_path = page.get('path')
+                    page_name = page.get('name', f'page_{idx}')
+                    
+                    if not page_path:
+                        print(f"⚠️ No path found for page: {page_name}")
+                        continue
+                    
+                    # Get filename from path - use part after last slash if present
+                    if '/' in page_path:
+                        filename = page_path.split('/')[-1]
+                    else:
+                        filename = page_path
+                    
+                    # Sanitize filename
+                    safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+                    safe_filename = safe_filename.replace(' ', '_')
+                    
+                    # Download the actual page content
+                    page_content = client.get_portal_page_content(asset_group_id, asset_asset_id, asset_version, page_path)
+                    if page_content:
+                        content_file = pages_dir / f"{safe_filename}_content.json"
+                        save_json(page_content, content_file)
+                        print(f"💾 Saved page content: {content_file}")
+                        docs_downloaded_count += 1
+                        
+                        if MARKDOWNIFY_AVAILABLE and 'content' in page_content and page_content['content_type'].startswith('text/html'):
+                            markdown_file = pages_dir / f"{safe_filename}_content.md"
+                            markdown_content = md(page_content['content'])
+                            save_markdown(markdown_content, markdown_file)
+                            print(f"💾 Saved page content as Markdown: {markdown_file}")
+                            docs_downloaded_count += 1
+                    
+                    # Add small delay to avoid rate limiting
+                    time.sleep(0.1)
         
         # Use files from asset details instead of separate API call
         files = asset_details.get('files', []) if asset_details else []
@@ -484,6 +671,7 @@ def main():
         "organization_id": org_id,
         "total_assets": len(latest_assets),
         "openapi_specs_downloaded": downloaded_count,
+        "documentation_items_downloaded": docs_downloaded_count,
         "output_directory": str(output_path.absolute()),
         "settings": {
             "include_documentation": include_docs,
@@ -502,12 +690,14 @@ def main():
     print(f"\n✅ Download completed in {elapsed_time:.2f} seconds!")
     print(f"📊 Total assets processed: {len(latest_assets)}")
     print(f"📄 OpenAPI specs downloaded: {downloaded_count}")
+    print(f"📚 Documentation items downloaded: {docs_downloaded_count}")
     print(f"📁 Files saved to: {output_path.absolute()}")
     
     # Set GitHub Actions outputs
     if os.getenv('GITHUB_OUTPUT'):
         with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
             f.write(f"specs-count={downloaded_count}\n")
+            f.write(f"docs-count={docs_downloaded_count}\n")
             f.write(f"output-path={output_path.absolute()}\n")
 
 
