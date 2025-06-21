@@ -25,6 +25,10 @@ on:
 
 jobs:
   export-api-specs:
+
+    permissions:
+      contents: write
+
     runs-on: ubuntu-latest
     
     steps:

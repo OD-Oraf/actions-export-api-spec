@@ -2,6 +2,8 @@ name: 'Export API Specs from MuleSoft Anypoint Exchange'
 description: 'Downloads OpenAPI specifications, categories, tags, and documentation from MuleSoft Anypoint Exchange'
 author: 'Your Organization'
 
+
+
 inputs:
   exchange-url:
     description: 'MuleSoft Anypoint Exchange URL'
@@ -53,7 +55,9 @@ outputs:
   output-path:
     description: 'Path where files were downloaded'
 
+
 runs:
+
   using: 'composite'
   steps:
     - name: Setup Python
@@ -115,6 +119,8 @@ runs:
           git commit -m "Update API specs, categories, and documentation from MuleSoft Anypoint Exchange"
           git push
         fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
