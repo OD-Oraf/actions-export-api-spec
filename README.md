@@ -5,10 +5,13 @@ A GitHub Action that downloads OpenAPI specifications, documentation, and metada
 ## Features
 
 - 🔐 Secure authentication using CLIENT_ID and CLIENT_SECRET
-- 📄 Downloads OpenAPI/Swagger specifications
-- 📚 Downloads documentation and related files
-- 🏷️ Exports categories, tags, and metadata
+- 📄 Downloads OpenAPI/Swagger specifications from Exchange
+- 📚 Downloads portal documentation and converts HTML to Markdown
+- 🏷️ Exports categories, tags, and metadata as JSON
+- 📁 Automatically extracts ZIP files containing specifications
+- 🔄 Filters to latest versions of each asset automatically
 - 📦 Stores all files as GitHub Actions artifacts
+- 🚀 Commits downloaded files directly to repository
 - 🔍 Supports filtering by organization, group, and asset ID
 
 ## MuleSoft API Endpoints Used
@@ -62,7 +65,7 @@ jobs:
           output-directory: 'downloaded-specs'
 ```
 
-### Advanced Usage
+### Advanced Usage with Repository Integration
 
 ```yaml
 name: Export Specific API Specs
@@ -73,10 +76,14 @@ on:
         description: 'Specific Asset ID to download'
         required: false
         type: string
+  push:
+    branches: [ develop ]
 
 jobs:
   export-specs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -92,6 +99,7 @@ jobs:
           asset-id: ${{ github.event.inputs.asset_id }}
           group-id: 'your-group-id'
           output-directory: 'api-specs'
+          repository-destination: 'specs'
           include-documentation: 'true'
           include-metadata: 'true'
 ```
@@ -107,12 +115,15 @@ jobs:
 | `output-directory` | Directory to store downloaded files | No | `api-specs` |
 | `include-documentation` | Whether to download documentation | No | `true` |
 | `include-metadata` | Whether to download categories and tags | No | `true` |
+| `repository-destination` | Directory in repository where files should be moved | No | `.` |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
 | `specs-count` | Number of OpenAPI specifications downloaded |
+| `docs-count` | Number of documentation items downloaded |
+| `categories-count` | Number of categories extracted |
 | `output-path` | Path where files were downloaded |
 
 ## Environment Variables
@@ -129,11 +140,17 @@ The action creates the following directory structure:
 ```
 api-specs/
 ├── download_summary.json                 # Summary of the download process
-├── groupId_assetId_version/              # Directory per asset
+├── categories.json                       # Consolidated categories from all assets
+├── assetId_version/                      # Directory per asset
 │   ├── metadata.json                     # Asset metadata (categories, tags, etc.)
-│   ├── api-spec.yaml                     # OpenAPI specification
-│   ├── documentation.md                  # Documentation files
-│   └── ...                               # Other related files
+│   ├── portal_info.json                  # Portal information
+│   ├── portal_pages.json                 # Portal pages metadata
+│   ├── assetId-version-oas_extracted/    # Extracted OpenAPI specifications
+│   │   ├── openapi.yaml                  # OpenAPI specification file
+│   │   └── exchange.json                 # Exchange metadata
+│   └── pages/                            # Documentation pages
+│       ├── *.md                          # Markdown documentation
+│       └── *_content.json                # Raw page content
 └── ...
 ```
 
@@ -207,6 +224,8 @@ jobs:
       - name: Display results
         run: |
           echo "Downloaded ${{ steps.export.outputs.specs-count }} API specifications"
+          echo "Downloaded ${{ steps.export.outputs.docs-count }} documentation items"
+          echo "Extracted ${{ steps.export.outputs.categories-count }} categories"
           echo "Files saved to: ${{ steps.export.outputs.output-path }}"
           ls -la exported-specs/
       
