@@ -1,0 +1,23 @@
+[
+  {
+    "tagKey": "Platform",
+    "value": [
+      "AWS",
+      "GCP"
+    ]
+  },
+  {
+    "tagKey": "Technology",
+    "value": [
+      "Rest",
+      "Springboot"
+    ]
+  },
+  {
+    "tagKey": "Owning Business Group",
+    "value": [
+      "Global",
+      "Service"
+    ]
+  }
+]
