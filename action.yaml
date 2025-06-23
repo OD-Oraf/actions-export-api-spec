@@ -2,8 +2,6 @@ name: 'Export API Specs from MuleSoft Anypoint Exchange'
 description: 'Downloads OpenAPI specifications, categories, tags, and documentation from MuleSoft Anypoint Exchange'
 author: 'Your Organization'
 
-
-
 inputs:
   exchange-url:
     description: 'MuleSoft Anypoint Exchange URL'
@@ -55,9 +53,7 @@ outputs:
   output-path:
     description: 'Path where files were downloaded'
 
-
 runs:
-
   using: 'composite'
   steps:
     - name: Setup Python
@@ -88,23 +84,17 @@ runs:
     - name: Move files to repository destination
       shell: bash
       run: |
-        mkdir -p ${{ inputs.repository-destination }}
-        # Move extracted OAS files, categories.json, and markdown files
+        mkdir -p ${{ inputs.repository-destination }}/documentation
+        
         if [ -d "${{ inputs.output-directory }}" ]; then
-          # Find and move OAS files (from extracted directories)
-          find ${{ inputs.output-directory }} -name "*.yaml" -o -name "*.yml" -o -name "*.json" | grep -E "\.(yaml|yml|json)$" | while read file; do
-            if [[ "$file" == *"_extracted/"* ]] || [[ "$file" == *"categories.json" ]]; then
-              cp "$file" ${{ inputs.repository-destination }}/
-            fi
-          done
+          # Move extracted OAS files (YAML/JSON from extracted directories)
+          find ${{ inputs.output-directory }} -path "*_extracted/*" \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" \) -exec cp {} ${{ inputs.repository-destination }}/ \;
           
-          # Move all markdown files
-          find ${{ inputs.output-directory }} -name "*.md" -exec cp {} documenation/${{ inputs.repository-destination }}/ \;
+          # Move markdown files to documentation folder
+          find ${{ inputs.output-directory }} -name "*.md" -exec cp {} ${{ inputs.repository-destination }}/documentation/ \;
           
-          # Move categories.json if it exists
-          if [ -f "${{ inputs.output-directory }}/categories.json" ]; then
-            cp ${{ inputs.output-directory }}/categories.json ${{ inputs.repository-destination }}/
-          fi
+          # Move categories.json to root
+          find ${{ inputs.output-directory }} -name "categories.json" -exec cp {} ${{ inputs.repository-destination }}/ \;
         fi
     
     - name: Commit and push files
