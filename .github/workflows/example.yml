@@ -40,8 +40,8 @@ jobs:
           CLIENT_ID: ${{  secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{  secrets.CLIENT_SECRET }}
         with:
-          organization-id: ${{ github.event.inputs.organization_id || vars.MULESOFT_ORG_ID }}
-          asset-id: ${{ github.event.inputs.asset_id }}
+          organization-id: ${{ inputs.organization_id }}
+          asset-id: ${{ inputs.asset_id }}
           output-directory: 'mulesoft-api-specs'
           include-metadata: 'true'
           
