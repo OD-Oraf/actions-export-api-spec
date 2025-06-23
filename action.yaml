@@ -99,7 +99,7 @@ runs:
           done
           
           # Move all markdown files
-          find ${{ inputs.output-directory }} -name "*.md" -exec cp {} ${{ inputs.repository-destination }}/ \;
+          find ${{ inputs.output-directory }} -name "*.md" -exec cp {} documenation/${{ inputs.repository-destination }}/ \;
           
           # Move categories.json if it exists
           if [ -f "${{ inputs.output-directory }}/categories.json" ]; then
