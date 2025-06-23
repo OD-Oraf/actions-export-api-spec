@@ -45,7 +45,7 @@ exported-specs/
 *.log
 
 # Environment variables
-.env
+.env*
 .env.local
 
 
