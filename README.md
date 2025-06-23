@@ -1,18 +1,20 @@
 # MuleSoft Anypoint Exchange API Spec Exporter
 
-A GitHub Action that downloads OpenAPI specifications, documentation, and metadata from MuleSoft Anypoint Exchange using the Platform API.
+A GitHub Action that downloads OpenAPI specifications, documentation, and metadata from MuleSoft Anypoint Exchange using the Platform API and automatically organizes them in your repository.
 
 ## Features
 
-- 🔐 Secure authentication using CLIENT_ID and CLIENT_SECRET
-- 📄 Downloads OpenAPI/Swagger specifications from Exchange
-- 📚 Downloads portal documentation and converts HTML to Markdown
-- 🏷️ Exports categories, tags, and metadata as JSON
-- 📁 Automatically extracts ZIP files containing specifications
-- 🔄 Filters to latest versions of each asset automatically
-- 📦 Stores all files as GitHub Actions artifacts
-- 🚀 Commits downloaded files directly to repository
-- 🔍 Supports filtering by organization, group, and asset ID
+- Secure authentication using CLIENT_ID and CLIENT_SECRET
+- Downloads OpenAPI/Swagger specifications from Exchange
+- Downloads portal documentation and converts HTML to Markdown
+- Exports categories, tags, and metadata as JSON
+- Automatically extracts ZIP files containing specifications
+- Filters to latest versions of each asset automatically
+- Stores all files as GitHub Actions artifacts
+- Commits downloaded files directly to repository with customizable organization
+- **NEW:** Flexible file organization with custom paths for specs, docs, and metadata
+- Simplified configuration using only organization ID
+- Environment variable support for local development
 
 ## MuleSoft API Endpoints Used
 
@@ -21,8 +23,10 @@ This action uses the following MuleSoft Anypoint Platform API endpoints:
 - **Authentication**: `POST /accounts/api/v2/oauth2/token` - OAuth2 client credentials flow
 - **User Profile**: `GET /accounts/api/profile` - Get user organizations
 - **Asset Search**: `GET /exchange/api/v2/assets` - Search for assets in Exchange
-- **Asset Details**: `GET /exchange/api/v2/assets/{groupId}/{assetId}/{version}` - Get asset metadata
-- **Asset Files**: `GET /exchange/api/v2/assets/{groupId}/{assetId}/{version}/files` - Get downloadable files
+- **Asset Details**: `GET /exchange/api/v2/assets/{organizationId}/{assetId}/{version}` - Get asset metadata
+- **Asset Files**: `GET /exchange/api/v2/assets/{organizationId}/{assetId}/{version}/files` - Get downloadable files
+- **Portal Info**: `GET /exchange/api/v2/assets/{organizationId}/{assetId}/{version}/portal` - Get portal information
+- **Portal Pages**: `GET /exchange/api/v2/assets/{organizationId}/{assetId}/{version}/portal/pages` - Get documentation pages
 
 ## Prerequisites
 
@@ -49,73 +53,108 @@ on:
     - cron: '0 2 * * 1' # Weekly on Monday at 2 AM
 
 jobs:
-  export-specs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      
-      - name: Export API Specs from Anypoint Exchange
-        uses: ./
-        env:
-          CLIENT_ID: ${{ secrets.MULESOFT_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.MULESOFT_CLIENT_SECRET }}
-        with:
-          organization-id: 'your-org-id-here'
-          output-directory: 'downloaded-specs'
-```
-
-### Advanced Usage with Repository Integration
-
-```yaml
-name: Export Specific API Specs
-on:
-  workflow_dispatch:
-    inputs:
-      asset_id:
-        description: 'Specific Asset ID to download'
-        required: false
-        type: string
-  push:
-    branches: [ develop ]
-
-jobs:
-  export-specs:
+  export:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
-      - name: Export API Specs from Anypoint Exchange
-        uses: ./
+      - name: Export API Specs
+        uses: your-org/actions-export-api-spec@v1
         env:
-          CLIENT_ID: ${{ secrets.MULESOFT_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.MULESOFT_CLIENT_SECRET }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         with:
-          exchange-url: 'https://anypoint.mulesoft.com'
-          organization-id: 'your-org-id-here'
-          asset-id: ${{ github.event.inputs.asset_id }}
-          group-id: 'your-group-id'
-          output-directory: 'api-specs'
-          repository-destination: 'specs'
-          include-documentation: 'true'
-          include-metadata: 'true'
+          organization-id: 'your-organization-id'
 ```
 
-## Inputs
+### Advanced Usage with Custom Organization
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `exchange-url` | MuleSoft Anypoint Exchange URL | No | `https://anypoint.mulesoft.com` |
+```yaml
+- name: Export API Specs with Custom Organization
+  uses: your-org/actions-export-api-spec@v1
+  env:
+    CLIENT_ID: ${{ secrets.CLIENT_ID }}
+    CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+  with:
+    organization-id: 'your-organization-id'
+    asset-id: 'specific-api'                    # Optional: Download specific asset
+    repository-destination: '.'                 # Repository root
+    documentation-path: 'docs/api-guides'      # Custom docs location
+    categories-path: 'metadata'                # Custom metadata location  
+    specs-path: 'api-specifications'           # Custom specs location
+    include-metadata: 'true'
+```
+
+## Input Parameters
+
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
 | `organization-id` | MuleSoft Organization ID | Yes | - |
 | `asset-id` | Specific Asset ID to download (optional) | No | - |
-| `group-id` | Group ID to filter assets | No | - |
-| `output-directory` | Directory to store downloaded files | No | `api-specs` |
-| `include-documentation` | Whether to download documentation | No | `true` |
-| `include-metadata` | Whether to download categories and tags | No | `true` |
-| `repository-destination` | Directory in repository where files should be moved | No | `.` |
+| `exchange-url` | MuleSoft Anypoint Exchange URL | No | `https://anypoint.mulesoft.com` |
+| `output-directory` | Temporary directory for downloads | No | `api-specs` |
+| `include-metadata` | Download categories and metadata | No | `true` |
+| `repository-destination` | Repository directory for files | No | `.` |
+| `documentation-path` | Custom path for documentation files | No | `''` |
+| `categories-path` | Custom path for categories.json | No | `.` |
+| `specs-path` | Custom path for OpenAPI specifications | No | `.` |
+
+## Repository Organization
+
+The action organizes downloaded files based on your configuration:
+
+### Default Organization
+```
+repository-root/
+├── documentation/           # Markdown documentation files
+│   ├── Content Paged.md
+│   ├── API Guide.md
+│   └── User Manual.md
+├── categories.json          # Categories and metadata
+└── openapi-spec.yaml        # OpenAPI specifications
+```
+
+### Custom Organization Example
+```yaml
+# Configuration:
+documentation-path: 'docs/api-guides'
+categories-path: 'metadata'  
+specs-path: 'api-specifications'
+```
+
+```
+repository-root/
+├── documentation/
+│   └── docs/
+│       └── api-guides/      # Custom documentation location
+│           ├── Content Paged.md
+│           └── API Guide.md
+├── metadata/                # Custom metadata location
+│   └── categories.json
+└── api-specifications/      # Custom specifications location
+    ├── customer-api.yaml
+    └── order-api.yml
+```
+
+## Environment Variables
+
+For local development, create a `.env` file:
+
+```bash
+# Required
+CLIENT_ID=your-client-id
+CLIENT_SECRET=your-client-secret
+ORGANIZATION_ID=your-org-id
+
+# Optional
+EXCHANGE_URL=https://anypoint.mulesoft.com
+ASSET_ID=specific-asset-id
+OUTPUT_DIR=api-specs
+INCLUDE_DOCS=true
+INCLUDE_METADATA=true
+```
 
 ## Outputs
 
@@ -123,36 +162,8 @@ jobs:
 |--------|-------------|
 | `specs-count` | Number of OpenAPI specifications downloaded |
 | `docs-count` | Number of documentation items downloaded |
-| `categories-count` | Number of categories extracted |
-| `output-path` | Path where files were downloaded |
-
-## Environment Variables
-
-The following environment variables must be set (typically as repository secrets):
-
-- `CLIENT_ID`: Your MuleSoft Anypoint Platform Client ID
-- `CLIENT_SECRET`: Your MuleSoft Anypoint Platform Client Secret
-
-## File Structure
-
-The action creates the following directory structure:
-
-```
-api-specs/
-├── download_summary.json                 # Summary of the download process
-├── categories.json                       # Consolidated categories from all assets
-├── assetId_version/                      # Directory per asset
-│   ├── metadata.json                     # Asset metadata (categories, tags, etc.)
-│   ├── portal_info.json                  # Portal information
-│   ├── portal_pages.json                 # Portal pages metadata
-│   ├── assetId-version-oas_extracted/    # Extracted OpenAPI specifications
-│   │   ├── openapi.yaml                  # OpenAPI specification file
-│   │   └── exchange.json                 # Exchange metadata
-│   └── pages/                            # Documentation pages
-│       ├── *.md                          # Markdown documentation
-│       └── *_content.json                # Raw page content
-└── ...
-```
+| `categories-count` | Number of unique categories extracted |
+| `output-path` | Path where files were saved |
 
 ## Setting up Repository Secrets
 
@@ -160,8 +171,8 @@ api-specs/
 2. Navigate to Settings → Secrets and variables → Actions
 3. Click "New repository secret"
 4. Add the following secrets:
-   - Name: `MULESOFT_CLIENT_ID`, Value: Your MuleSoft Client ID
-   - Name: `MULESOFT_CLIENT_SECRET`, Value: Your MuleSoft Client Secret
+   - Name: `CLIENT_ID`, Value: Your MuleSoft Client ID
+   - Name: `CLIENT_SECRET`, Value: Your MuleSoft Client Secret
 
 ## Getting MuleSoft Credentials
 
@@ -171,6 +182,31 @@ api-specs/
 4. Create a new Connected App or use an existing one
 5. Note the Client ID and Client Secret
 6. Ensure the app has the necessary scopes for Exchange access
+
+## Local Development
+
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env` and fill in your credentials
+4. Run the script: `python download_specs.py`
+
+## File Processing Features
+
+### Automatic ZIP Extraction
+- Detects ZIP files by magic bytes (PK headers)
+- Automatically extracts contents to `{filename}_extracted/` directory
+- Removes original ZIP file after successful extraction
+
+### Documentation Conversion
+- Downloads HTML portal pages from MuleSoft Exchange
+- Converts HTML content to clean Markdown format
+- Preserves original spacing and formatting
+- Saves both JSON metadata and Markdown files
+
+### Categories Extraction
+- Automatically extracts categories from asset metadata
+- Consolidates unique categories across all assets
+- Outputs structured JSON with `tagKey` and `value` properties
 
 ## Troubleshooting
 
@@ -182,16 +218,21 @@ api-specs/
 ### No Assets Found
 - Verify the organization ID is correct
 - Check if you have access to the specified assets
-- Try removing group-id or asset-id filters
+- Try removing asset-id filter to see all available assets
 
 ### Download Failures
 - Check network connectivity
 - Verify the Exchange URL is accessible
 - Look for rate limiting issues in the logs
 
-## Example Workflow
+### Path Configuration Issues
+- Ensure custom paths don't conflict with existing repository structure
+- Use `.` for root-level placement
+- Documentation files are always placed under `documentation/` folder
 
-Here's a complete example workflow that runs weekly and uploads the results:
+## Complete Example Workflow
+
+Here's a comprehensive example that demonstrates all features:
 
 ```yaml
 name: Weekly API Spec Export
@@ -199,39 +240,68 @@ name: Weekly API Spec Export
 on:
   schedule:
     - cron: '0 2 * * 1' # Every Monday at 2 AM
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      organization_id:
+        description: 'Organization ID'
+        required: true
+        type: string
+      asset_id:
+        description: 'Specific Asset (optional)'
+        required: false
+        type: string
 
 jobs:
   export-api-specs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Export API Specs from MuleSoft Exchange
-        uses: ./
+        uses: your-org/actions-export-api-spec@v1
         id: export
         env:
-          CLIENT_ID: ${{ secrets.MULESOFT_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.MULESOFT_CLIENT_SECRET }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         with:
-          organization-id: ${{ vars.MULESOFT_ORG_ID }}
-          output-directory: 'exported-specs'
-          include-documentation: 'true'
+          organization-id: ${{ github.event.inputs.organization_id || vars.MULESOFT_ORG_ID }}
+          asset-id: ${{ github.event.inputs.asset_id }}
+          repository-destination: '.'
+          documentation-path: 'docs/mulesoft-apis'
+          categories-path: 'metadata'
+          specs-path: 'api-specifications'
           include-metadata: 'true'
       
       - name: Display results
         run: |
+          echo "Export completed successfully!"
           echo "Downloaded ${{ steps.export.outputs.specs-count }} API specifications"
           echo "Downloaded ${{ steps.export.outputs.docs-count }} documentation items"
           echo "Extracted ${{ steps.export.outputs.categories-count }} categories"
-          echo "Files saved to: ${{ steps.export.outputs.output-path }}"
-          ls -la exported-specs/
-      
-      # The artifacts are automatically uploaded by the action
-      # You can access them in the Actions tab of your repository
+          echo "Files organized in repository"
+          echo ""
+          echo "Repository structure:"
+          find . -name "*.yaml" -o -name "*.yml" -o -name "*.md" -o -name "categories.json" | head -10
 ```
+
+## Migration from Previous Versions
+
+### Removed Parameters
+- `group-id`: No longer needed, uses `organization-id` directly
+- `include-documentation`: Documentation is now always downloaded
+
+### New Parameters
+- `documentation-path`: Customize documentation location
+- `categories-path`: Customize categories.json location  
+- `specs-path`: Customize OpenAPI specifications location
+
+### Updated Environment Variables
+- `GROUP_ID`: Removed (use `ORGANIZATION_ID`)
+- `INCLUDE_DOCS`: Always `true` (documentation always downloaded)
 
 ## License
 
