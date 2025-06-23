@@ -13,6 +13,7 @@ import requests
 import yaml
 import zipfile
 from pathlib import Path
+from typing import Dict, List, Optional, Any
 import time
 
 # Load environment variables from .env file if it exists
@@ -176,8 +177,7 @@ class AnypointExchangeClient:
             print(f" Failed to get organizations: {e}")
             return []
     
-    def search_assets(self, org_id: str, group_id: Optional[str] = None, 
-                     asset_id: Optional[str] = None) -> List[Dict]:
+    def search_assets(self, org_id: str, asset_id: Optional[str] = None) -> List[Dict]:
         """Search for assets in Exchange"""
         url = f"{self.base_url}/exchange/api/v2/assets"
         
@@ -186,8 +186,6 @@ class AnypointExchangeClient:
             "limit": 100
         }
         
-        if group_id:
-            params["groupId"] = group_id
         if asset_id:
             params["search"] = asset_id
         
@@ -211,13 +209,13 @@ class AnypointExchangeClient:
             print(f" Failed to search assets: {e}")
             return []
     
-    def get_asset_details(self, group_id: str, asset_id: str, version: str, org_id: str) -> Optional[Dict]:
+    def get_asset_details(self, asset_id: str, version: str, org_id: str) -> Optional[Dict]:
         """Get detailed information about a specific asset"""
-        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}"
+        url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}"
         
         params = {"organizationId": org_id}
         
-        print(f" Fetching asset details for {group_id}/{asset_id}:{version}")
+        print(f" Fetching asset details for {asset_id}:{version}")
         print(f" GET {url}")
         print(f" Parameters: {params}")
         
@@ -233,13 +231,13 @@ class AnypointExchangeClient:
             print(f" Failed to get asset details for {asset_id}: {e}")
             return None
     
-    def download_asset_files(self, group_id: str, asset_id: str, version: str, org_id: str) -> Dict[str, Any]:
+    def download_asset_files(self, asset_id: str, version: str, org_id: str) -> Dict[str, Any]:
         """Download files associated with an asset"""
-        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/files"
+        url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}/files"
         
         params = {"organizationId": org_id}
         
-        print(f" Fetching file list for {group_id}/{asset_id}:{version}")
+        print(f" Fetching file list for {asset_id}:{version}")
         print(f" GET {url}")
         print(f" Parameters: {params}")
         
@@ -294,11 +292,11 @@ class AnypointExchangeClient:
             print(f" Failed to download file {file_name}: {e}")
             return None
     
-    def get_portal_info(self, group_id: str, asset_id: str, version: str) -> Optional[Dict]:
+    def get_portal_info(self, asset_id: str, version: str) -> Optional[Dict]:
         """Get portal information for an asset"""
-        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal"
+        url = f"{self.base_url}/exchange/api/v2/assets/{asset_id}/{version}/portal"
         
-        print(f" Fetching portal info for {group_id}/{asset_id}:{version}")
+        print(f" Fetching portal info for {asset_id}:{version}")
         print(f" GET {url}")
         
         try:
@@ -315,11 +313,11 @@ class AnypointExchangeClient:
             print(f" Failed to get portal info for {asset_id}: {e}")
             return None
     
-    def get_portal_pages(self, group_id: str, asset_id: str, version: str) -> Optional[List[Dict]]:
+    def get_portal_pages(self, asset_id: str, version: str) -> Optional[List[Dict]]:
         """Get portal pages for an asset"""
-        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal/pages"
+        url = f"{self.base_url}/exchange/api/v2/assets/{asset_id}/{version}/portal/pages"
         
-        print(f" Fetching portal pages for {group_id}/{asset_id}:{version}")
+        print(f" Fetching portal pages for {asset_id}:{version}")
         print(f" GET {url}")
         
         try:
@@ -338,12 +336,12 @@ class AnypointExchangeClient:
             print(f" Failed to get portal pages for {asset_id}: {e}")
             return None
 
-    def get_portal_page_content(self, group_id: str, asset_id: str, version: str, page_path: str) -> Optional[Dict]:
+    def get_portal_page_content(self, asset_id: str, version: str, page_path: str) -> Optional[Dict]:
         """Get content of a specific portal page using its path"""
         # URL encode the page path to handle spaces and special characters
         import urllib.parse
         encoded_path = urllib.parse.quote(page_path, safe='/')
-        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal/pages/{encoded_path}"
+        url = f"{self.base_url}/exchange/api/v2/assets/{asset_id}/{version}/portal/pages/{encoded_path}"
         
         print(f" Fetching page content for path: {page_path}")
         print(f" GET {url}")
@@ -532,7 +530,6 @@ def main():
     exchange_url = os.getenv('EXCHANGE_URL', 'https://anypoint.mulesoft.com')
     org_id = os.getenv('ORGANIZATION_ID')
     asset_id = os.getenv('ASSET_ID')
-    group_id = os.getenv('GROUP_ID')
     output_dir = os.getenv('OUTPUT_DIR', 'api-specs')
     include_docs = os.getenv('INCLUDE_DOCS', 'true').lower() == 'true'
     include_metadata = os.getenv('INCLUDE_METADATA', 'true').lower() == 'true'
@@ -550,15 +547,10 @@ def main():
         print(" Error: ORGANIZATION_ID environment variable is required")
         sys.exit(1)
     
-    # Set group_id to org_id if not specified
-    if not group_id:
-        group_id = org_id
-    
     print(f" Starting MuleSoft Anypoint Exchange API spec download...")
     print(f" Output directory: {output_dir}")
     print(f" Organization ID: {org_id}")
     print(f" Asset ID filter: {asset_id if asset_id else 'None (all assets)'}")
-    print(f" Group ID filter: {group_id if group_id else 'None (all groups)'}")
     print(f" Include documentation: {include_docs}")
     print(f" Include metadata: {include_metadata}")
     print(f" Exchange URL: {exchange_url}")
@@ -581,7 +573,7 @@ def main():
     # Search for assets
     print("=" * 60)
     print(f" Searching for assets...")
-    assets = client.search_assets(org_id, group_id, asset_id)
+    assets = client.search_assets(org_id, asset_id)
     
     if not assets:
         print(" No assets found")
@@ -599,26 +591,25 @@ def main():
     all_categories = []
     
     for i, asset in enumerate(latest_assets, 1):
-        asset_group_id = asset.get('groupId')
         asset_asset_id = asset.get('assetId')
         asset_version = asset.get('version')
         
-        print(f"\n Processing asset {i}/{len(latest_assets)}: {asset_group_id}/{asset_asset_id}:{asset_version}")
+        print(f"\n Processing asset {i}/{len(latest_assets)}: {asset_asset_id}:{asset_version}")
         
-        if not all([asset_group_id, asset_asset_id, asset_version]):
+        if not all([asset_asset_id, asset_version]):
             print(f" Skipping asset with missing identifiers: {asset}")
             continue
         
         processed_count += 1
         
-        print(f" Processing asset: {asset_group_id}/{asset_asset_id}:{asset_version}")
+        print(f" Processing asset: {asset_asset_id}:{asset_version}")
         
         # Create asset directory
         asset_dir = output_path / f"{asset_asset_id}_{asset_version}"
         asset_dir.mkdir(parents=True, exist_ok=True)
         
         # Get asset details
-        asset_details = client.get_asset_details(asset_group_id, asset_asset_id, asset_version, org_id)
+        asset_details = client.get_asset_details(asset_asset_id, asset_version, org_id)
         
         if asset_details and include_metadata:
             # Save asset metadata
@@ -634,7 +625,7 @@ def main():
             print(f" Downloading documentation for {asset_asset_id}...")
             
             # Get portal information
-            portal_info = client.get_portal_info(asset_group_id, asset_asset_id, asset_version)
+            portal_info = client.get_portal_info(asset_asset_id, asset_version)
             if portal_info:
                 portal_file = asset_dir / "portal_info.json"
                 save_json(portal_info, portal_file)
@@ -642,7 +633,7 @@ def main():
                 docs_downloaded_count += 1
             
             # Get portal pages
-            portal_pages = client.get_portal_pages(asset_group_id, asset_asset_id, asset_version)
+            portal_pages = client.get_portal_pages(asset_asset_id, asset_version)
             if portal_pages:
                 pages_file = asset_dir / "portal_pages.json"
                 save_json(portal_pages, pages_file)
@@ -686,7 +677,7 @@ def main():
                     markdown_name = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
                     
                     # Download the actual page content
-                    page_content = client.get_portal_page_content(asset_group_id, asset_asset_id, asset_version, page_path)
+                    page_content = client.get_portal_page_content(asset_asset_id, asset_version, page_path)
                     if page_content:
                         content_file = pages_dir / f"{safe_filename}_content.json"
                         save_json(page_content, content_file)

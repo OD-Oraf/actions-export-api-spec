@@ -16,10 +16,6 @@ inputs:
     description: 'Asset ID to download (optional - if not provided, downloads all assets)'
     required: false
   
-  group-id:
-    description: 'Group ID to filter assets (optional)'
-    required: false
-  
   output-directory:
     description: 'Directory to store downloaded files'
     required: false
@@ -84,7 +80,6 @@ runs:
         EXCHANGE_URL: ${{ inputs.exchange-url }}
         ORGANIZATION_ID: ${{ inputs.organization-id }}
         ASSET_ID: ${{ inputs.asset-id }}
-        GROUP_ID: ${{ inputs.group-id }}
         OUTPUT_DIR: ${{ inputs.output-directory }}
         INCLUDE_DOCS: 'true'
         INCLUDE_METADATA: ${{ inputs.include-metadata }}
