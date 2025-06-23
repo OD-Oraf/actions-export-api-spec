@@ -13,8 +13,18 @@ import requests
 import yaml
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, Any
 import time
+
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("python-dotenv not installed. Install with: pip install python-dotenv")
+    print("Continuing with system environment variables...")
+except Exception as e:
+    print(f"Warning: Could not load .env file: {e}")
+    print("Continuing with system environment variables...")
 
 try:
     from markdownify import markdownify as md
@@ -516,35 +526,33 @@ def main():
     
     start_time = time.time()
     
-    # Get environment variables
-    # client_id = os.getenv('CLIENT_ID')
-    # client_secret = os.getenv('CLIENT_SECRET')
-    # exchange_url = os.getenv('EXCHANGE_URL', 'https://anypoint.mulesoft.com')
-    # org_id = os.getenv('ORGANIZATION_ID')
-    # asset_id = os.getenv('ASSET_ID')
-    # group_id = os.getenv('GROUP_ID')
-    # output_dir = os.getenv('OUTPUT_DIR', 'api-specs')
-    # include_docs = os.getenv('INCLUDE_DOCS', 'true').lower() == 'true'
-    # include_metadata = os.getenv('INCLUDE_METADATA', 'true').lower() == 'true'
-
-    client_id = "9fb175fef85e4b7fbc028166a30d8448"
-    client_secret = "909E56b28ff545169843C9cc3E40BfD2"
-    exchange_url = 'https://anypoint.mulesoft.com'
-    org_id = '1bb53e2e-0362-40c7-80cc-273290c8d74b'
-    asset_id = 'openapi'
-    group_id = org_id
+    #Get environment variables
+    client_id = os.getenv('CLIENT_ID')
+    client_secret = os.getenv('CLIENT_SECRET')
+    exchange_url = os.getenv('EXCHANGE_URL', 'https://anypoint.mulesoft.com')
+    org_id = os.getenv('ORGANIZATION_ID')
+    asset_id = os.getenv('ASSET_ID')
+    group_id = os.getenv('GROUP_ID')
     output_dir = os.getenv('OUTPUT_DIR', 'api-specs')
     include_docs = os.getenv('INCLUDE_DOCS', 'true').lower() == 'true'
     include_metadata = os.getenv('INCLUDE_METADATA', 'true').lower() == 'true'
-    
+
     # Validate required environment variables
-    if not client_id or not client_secret:
-        print(" CLIENT_ID and CLIENT_SECRET environment variables are required")
+    if not client_id:
+        print(" Error: CLIENT_ID environment variable is required")
+        sys.exit(1)
+    
+    if not client_secret:
+        print(" Error: CLIENT_SECRET environment variable is required")
         sys.exit(1)
     
     if not org_id:
-        print(" ORGANIZATION_ID environment variable is required")
+        print(" Error: ORGANIZATION_ID environment variable is required")
         sys.exit(1)
+    
+    # Set group_id to org_id if not specified
+    if not group_id:
+        group_id = org_id
     
     print(f" Starting MuleSoft Anypoint Exchange API spec download...")
     print(f" Output directory: {output_dir}")

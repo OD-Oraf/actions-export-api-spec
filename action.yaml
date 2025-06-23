@@ -64,7 +64,7 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        pip install requests pyyaml markdownify
+        pip install requests pyyaml markdownify python-dotenv
     
     - name: Download API specs from Anypoint Exchange
       shell: bash
