@@ -25,11 +25,6 @@ inputs:
     required: false
     default: 'api-specs'
   
-  include-documentation:
-    description: 'Whether to download documentation'
-    required: false
-    default: 'true'
-  
   include-metadata:
     description: 'Whether to download categories and tags metadata'
     required: false
@@ -37,6 +32,21 @@ inputs:
   
   repository-destination:
     description: 'Directory in the repository where files should be moved (relative to repository root)'
+    required: false
+    default: '.'
+  
+  documentation-path:
+    description: 'Custom subdirectory path for documentation files (will be created under documentation/ folder)'
+    required: false
+    default: ''
+  
+  categories-path:
+    description: 'Custom path for categories.json file within the repository'
+    required: false
+    default: '.'
+  
+  specs-path:
+    description: 'Custom path for OpenAPI specification files within the repository'
     required: false
     default: '.'
 
@@ -76,7 +86,7 @@ runs:
         ASSET_ID: ${{ inputs.asset-id }}
         GROUP_ID: ${{ inputs.group-id }}
         OUTPUT_DIR: ${{ inputs.output-directory }}
-        INCLUDE_DOCS: ${{ inputs.include-documentation }}
+        INCLUDE_DOCS: 'true'
         INCLUDE_METADATA: ${{ inputs.include-metadata }}
       run: |
         python ${{ github.action_path }}/download_specs.py
@@ -84,17 +94,44 @@ runs:
     - name: Move files to repository destination
       shell: bash
       run: |
-        mkdir -p ${{ inputs.repository-destination }}/documentation
+        # Set documentation path, handling empty or '.' values
+        DOC_PATH="${{ inputs.documentation-path }}"
+        if [ "$DOC_PATH" = "." ] || [ -z "$DOC_PATH" ]; then
+          DOC_FULL_PATH="${{ inputs.repository-destination }}/documentation"
+        else
+          DOC_FULL_PATH="${{ inputs.repository-destination }}/documentation/$DOC_PATH"
+        fi
+        
+        # Set categories path, handling empty or '.' values
+        CAT_PATH="${{ inputs.categories-path }}"
+        if [ "$CAT_PATH" = "." ] || [ -z "$CAT_PATH" ]; then
+          CAT_FULL_PATH="${{ inputs.repository-destination }}"
+        else
+          CAT_FULL_PATH="${{ inputs.repository-destination }}/$CAT_PATH"
+        fi
+        
+        # Set specs path, handling empty or '.' values
+        SPECS_PATH="${{ inputs.specs-path }}"
+        if [ "$SPECS_PATH" = "." ] || [ -z "$SPECS_PATH" ]; then
+          SPECS_FULL_PATH="${{ inputs.repository-destination }}"
+        else
+          SPECS_FULL_PATH="${{ inputs.repository-destination }}/$SPECS_PATH"
+        fi
+        
+        # Create directories
+        mkdir -p "$DOC_FULL_PATH"
+        mkdir -p "$CAT_FULL_PATH"
+        mkdir -p "$SPECS_FULL_PATH"
         
         if [ -d "${{ inputs.output-directory }}" ]; then
           # Move extracted OAS files (YAML/JSON from extracted directories)
-          find ${{ inputs.output-directory }} -path "*_extracted/*" \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" \) -exec cp {} ${{ inputs.repository-destination }}/ \;
+          find ${{ inputs.output-directory }} -path "*_extracted/*" \( -name "*.yaml" -o -name "*.yml" -o -name "*.json" \) -exec cp {} "$SPECS_FULL_PATH"/ \;
           
           # Move markdown files to documentation folder
-          find ${{ inputs.output-directory }} -name "*.md" -exec cp {} ${{ inputs.repository-destination }}/documentation/ \;
+          find ${{ inputs.output-directory }} -name "*.md" -exec cp {} "$DOC_FULL_PATH"/ \;
           
-          # Move categories.json to root
-          find ${{ inputs.output-directory }} -name "categories.json" -exec cp {} ${{ inputs.repository-destination }}/ \;
+          # Move categories.json to specified path
+          find ${{ inputs.output-directory }} -name "categories.json" -exec cp {} "$CAT_FULL_PATH"/ \;
         fi
     
     - name: Commit and push files
@@ -113,7 +150,7 @@ runs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: mulesoft-api-specs
+        name: mulesoft-api-specs  
         path: ${{ inputs.repository-destination }}
         retention-days: 30
 
