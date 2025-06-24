@@ -34,6 +34,57 @@ except ImportError:
     MARKDOWNIFY_AVAILABLE = False
     print(" markdownify not available - HTML content will be saved as-is")
 
+import re
+
+
+def extract_image_alt_attributes(html_content: str) -> List[str]:
+    """Extract alt attributes from img tags in HTML content (backward compatibility)"""
+    img_pattern = r'<img[^>]+alt=["\']([^"\']+)["\'][^>]*>'
+    alt_attributes = re.findall(img_pattern, html_content, re.IGNORECASE)
+    return alt_attributes
+
+
+def extract_image_info(html_content: str) -> List[Dict[str, str]]:
+    """Extract both alt attributes and src URLs from img tags in HTML content"""
+    # Pattern to match img tags and capture both src and alt attributes
+    img_pattern = r'<img[^>]*(?:src=["\']([^"\']+)["\'][^>]*alt=["\']([^"\']+)["\']|alt=["\']([^"\']+)["\'][^>]*src=["\']([^"\']+)["\'])[^>]*>'
+    
+    images = []
+    matches = re.finditer(img_pattern, html_content, re.IGNORECASE)
+    
+    for match in matches:
+        # Handle both possible orders of src and alt attributes
+        if match.group(1) and match.group(2):  # src first, then alt
+            src_url = match.group(1)
+            alt_text = match.group(2)
+        elif match.group(3) and match.group(4):  # alt first, then src
+            src_url = match.group(4)
+            alt_text = match.group(3)
+        else:
+            continue
+            
+        # Extract resource path from the alt attribute or src URL
+        resource_path = alt_text
+        
+        # If alt text looks like a path (contains resources/), use it directly
+        # Otherwise, try to extract from src URL
+        if 'resources/' not in alt_text and src_url:
+            # Extract resource path from src URL
+            # Example: https://anypoint.mulesoft.com/exchange/.../resources/Screenshot...png
+            if '/resources/' in src_url:
+                resource_path = src_url.split('/resources/')[-1]
+                # URL decode the resource path
+                import urllib.parse
+                resource_path = urllib.parse.unquote(resource_path)
+        
+        images.append({
+            'src_url': src_url,
+            'alt_text': alt_text,
+            'resource_path': resource_path
+        })
+    
+    return images
+
 
 def truncate_json_response(response_data: Any, max_length: int = 1000) -> str:
     """Truncate JSON response for logging purposes"""
@@ -257,46 +308,11 @@ class AnypointExchangeClient:
             print(f" Failed to get asset files for {asset_id}: {e}")
             return {}
     
-    def download_file_content(self, download_url: str, file_name: str = "unknown") -> Optional[bytes]:
-        """Download file content from a URL"""
-        print(f" Downloading file: {file_name}")
-        print(f" GET {download_url}")
-        
-        try:
-            response = self.session.get(download_url)
-            print(f" Response Status: {response.status_code}")
-            print(f" Content Length: {len(response.content)} bytes")
-            response.raise_for_status()
-            
-            # Log response body based on content type
-            content_type = response.headers.get('Content-Type', '').lower()
-            if 'application/json' in content_type:
-                try:
-                    json_data = response.json()
-                    print(f" Response Body: {truncate_json_response(json_data)}")
-                except:
-                    print(f" Response Body: Failed to parse JSON")
-            elif any(text_type in content_type for text_type in ['text/', 'application/yaml', 'application/xml']):
-                # For text-based files, show first part of content
-                text_content = response.text[:500]
-                print(f" Response Body (first 500 chars): {text_content}")
-                if len(response.text) > 500:
-                    print(f"... (truncated, total length: {len(response.text)} chars)")
-            else:
-                print(f" Response Body: Binary data ({content_type})")
-            
-            print(f" Successfully downloaded {file_name}")
-            return response.content
-            
-        except requests.exceptions.RequestException as e:
-            print(f" Failed to download file {file_name}: {e}")
-            return None
-    
-    def get_portal_info(self, asset_id: str, version: str) -> Optional[Dict]:
+    def get_portal_info(self, org_id: str, asset_id: str, version: str) -> Optional[Dict]:
         """Get portal information for an asset"""
-        url = f"{self.base_url}/exchange/api/v2/assets/{asset_id}/{version}/portal"
+        url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}/portal"
         
-        print(f" Fetching portal info for {asset_id}:{version}")
+        print(f" Fetching portal info for {org_id}:{asset_id}:{version}")
         print(f" GET {url}")
         
         try:
@@ -313,11 +329,11 @@ class AnypointExchangeClient:
             print(f" Failed to get portal info for {asset_id}: {e}")
             return None
     
-    def get_portal_pages(self, asset_id: str, version: str) -> Optional[List[Dict]]:
+    def get_portal_pages(self, org_id: str, asset_id: str, version: str) -> Optional[List[Dict]]:
         """Get portal pages for an asset"""
-        url = f"{self.base_url}/exchange/api/v2/assets/{asset_id}/{version}/portal/pages"
+        url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}/portal/pages"
         
-        print(f" Fetching portal pages for {asset_id}:{version}")
+        print(f" Fetching portal pages for {org_id}:{asset_id}:{version}")
         print(f" GET {url}")
         
         try:
@@ -336,12 +352,12 @@ class AnypointExchangeClient:
             print(f" Failed to get portal pages for {asset_id}: {e}")
             return None
 
-    def get_portal_page_content(self, asset_id: str, version: str, page_path: str) -> Optional[Dict]:
+    def get_portal_page_content(self, org_id: str, asset_id: str, version: str, page_path: str) -> Optional[Dict]:
         """Get content of a specific portal page using its path"""
         # URL encode the page path to handle spaces and special characters
         import urllib.parse
         encoded_path = urllib.parse.quote(page_path, safe='/')
-        url = f"{self.base_url}/exchange/api/v2/assets/{asset_id}/{version}/portal/pages/{encoded_path}"
+        url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}/portal/pages/{encoded_path}"
         
         print(f" Fetching page content for path: {page_path}")
         print(f" GET {url}")
@@ -387,6 +403,83 @@ class AnypointExchangeClient:
             
         except requests.exceptions.RequestException as e:
             print(f" Failed to get page content for path {page_path}: {e}")
+            return None
+
+    def get_resource_image(self, group_id: str, asset_id: str, version: str, resource_path: str) -> Optional[bytes]:
+        """Fetch image resource using the resources API endpoint"""
+        from pathlib import Path
+
+        url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal/resources/{resource_path}"
+        print(f" GET {url}")
+        payload = {}
+        headers = {
+            'Authorization': f"Bearer {self.access_token}",
+            'Content-Type': 'application/json'
+        }
+        
+        try:
+            response = requests.request("GET", url, headers=headers, data=payload)
+            print(f" Response Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                # Create filename with "resources/" prepended
+                filename = f"resources/{resource_path}"
+                
+                # Ensure it has .png extension if no extension present
+                if not any(filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.svg']):
+                    filename += '.png'
+                
+                # Create the file path and save
+                file_path = Path(filename)
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                with open(file_path, 'wb') as f:
+                    f.write(response.content)
+                
+                print(f" Saved image: {file_path}")
+                return response.content
+            else:
+                print(f" Failed to download image: HTTP {response.status_code}")
+                print(f" Response: {response.text}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            print(f" Failed to download image {resource_path}: {e}")
+            return None
+
+    def download_file_content(self, download_url: str, file_name: str = "unknown") -> Optional[bytes]:
+        """Download file content from a URL"""
+        print(f" Downloading file: {file_name}")
+        print(f" GET {download_url}")
+        
+        try:
+            response = self.session.get(download_url)
+            print(f" Response Status: {response.status_code}")
+            print(f" Content Length: {len(response.content)} bytes")
+            response.raise_for_status()
+            
+            # Log response body based on content type
+            content_type = response.headers.get('Content-Type', '').lower()
+            if 'application/json' in content_type:
+                try:
+                    json_data = response.json()
+                    print(f" Response Body: {truncate_json_response(json_data)}")
+                except:
+                    print(f" Response Body: Failed to parse JSON")
+            elif any(text_type in content_type for text_type in ['text/', 'application/yaml', 'application/xml']):
+                # For text-based files, show first part of content
+                text_content = response.text[:500]
+                print(f" Response Body (first 500 chars): {text_content}")
+                if len(response.text) > 500:
+                    print(f"... (truncated, total length: {len(response.text)} chars)")
+            else:
+                print(f" Response Body: Binary data ({content_type})")
+            
+            print(f" Successfully downloaded {file_name}")
+            return response.content
+            
+        except requests.exceptions.RequestException as e:
+            print(f" Failed to download file {file_name}: {e}")
             return None
 
 
@@ -523,6 +616,7 @@ def main():
     """Main function to download API specs from Anypoint Exchange"""
     
     start_time = time.time()
+    # Environment variables are already loaded at the top of the file
     
     #Get environment variables
     client_id = os.getenv('CLIENT_ID')
@@ -625,7 +719,7 @@ def main():
             print(f" Downloading documentation for {asset_asset_id}...")
             
             # Get portal information
-            portal_info = client.get_portal_info(asset_asset_id, asset_version)
+            portal_info = client.get_portal_info(org_id, asset_asset_id, asset_version)
             if portal_info:
                 portal_file = asset_dir / "portal_info.json"
                 save_json(portal_info, portal_file)
@@ -633,7 +727,7 @@ def main():
                 docs_downloaded_count += 1
             
             # Get portal pages
-            portal_pages = client.get_portal_pages(asset_asset_id, asset_version)
+            portal_pages = client.get_portal_pages(org_id, asset_asset_id, asset_version)
             if portal_pages:
                 pages_file = asset_dir / "portal_pages.json"
                 save_json(portal_pages, pages_file)
@@ -664,6 +758,7 @@ def main():
                         continue
                     
                     # Get filename from path - use part after last slash if present
+                    # Example: {"path": "9uv-lqc/Content Paged" -> "Content Paged"}
                     if '/' in page_path:
                         filename = page_path.split('/')[-1]
                     else:
@@ -677,7 +772,7 @@ def main():
                     markdown_name = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
                     
                     # Download the actual page content
-                    page_content = client.get_portal_page_content(asset_asset_id, asset_version, page_path)
+                    page_content = client.get_portal_page_content(org_id, asset_asset_id, asset_version, page_path)
                     if page_content:
                         content_file = pages_dir / f"{safe_filename}_content.json"
                         save_json(page_content, content_file)
@@ -685,6 +780,49 @@ def main():
                         docs_downloaded_count += 1
                         
                         if MARKDOWNIFY_AVAILABLE and 'content' in page_content and page_content['content_type'].startswith('text/html'):
+                            # Extract image alt attributes before converting to markdown
+                            html_content = page_content['content']
+                            images = extract_image_info(html_content)
+
+                            if images:
+                                print(f" Found {len(images)} images in page content")
+                                # Debug: Print image details
+                                for i, image in enumerate(images):
+                                    print(f"   Image {i+1}: alt='{image['alt_text']}', resource_path='{image['resource_path']}'")
+
+                                images_dir = asset_dir / "images"
+                                images_dir.mkdir(parents=True, exist_ok=True)
+
+                                # Fetch each image using the resources API
+                                for image in images:
+                                    encoded_resource_path = image['resource_path'].replace("resources/", "")
+                                    print(f" Fetching image: {encoded_resource_path}")
+                                    print(f"   Using API: /exchange/api/v2/assets/{asset.get('groupId')}/{asset_asset_id}/{asset_version}/portal/resources/{encoded_resource_path}")
+                                    image_content = client.get_resource_image(asset.get('groupId'), asset_asset_id, asset_version, encoded_resource_path)
+
+                                    if image_content:
+                                        # Create safe filename from alt text
+                                        safe_img_name = "".join(c for c in image['alt_text'] if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+                                        if not safe_img_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg')):
+                                            # Extract extension from original alt text if present
+                                            if '.' in image['alt_text']:
+                                                ext = image['alt_text'].split('.')[-1].lower()
+                                                if ext in ['png', 'jpg', 'jpeg', 'gif', 'svg']:
+                                                    safe_img_name += f".{ext}"
+                                                else:
+                                                    safe_img_name += ".png"  # default extension
+                                            else:
+                                                safe_img_name += ".png"  # default extension
+
+                                        image_file = images_dir / safe_img_name
+                                        if save_file(image_content, image_file):
+                                            print(f" Saved image: {image_file}")
+                                            docs_downloaded_count += 1
+                                        else:
+                                            print(f" Failed to save image: {safe_img_name}")
+                                    else:
+                                        print(f" Failed to fetch image: {image['resource_path']}")
+                            
                             markdown_file = pages_dir / f"{markdown_name}.md"
                             markdown_content = md(page_content['content'])
                             save_markdown(markdown_content, markdown_file)
