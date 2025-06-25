@@ -46,6 +46,7 @@ runs:
         CLIENT_ID: ${{ env.CLIENT_ID }}
         CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
       run: |
+        set -e
         echo "🔐 Generating MuleSoft access token..."
         
         # Make OAuth2 request to get access token
@@ -53,9 +54,9 @@ runs:
           --header 'Content-Type: application/json' \
           --data '{ \
               "grant_type" : "client_credentials", \
-              "client_id" : "9fb175fef85e4b7fbc028166a30d8448", \
-              "client_secret" : "909E56b28ff545169843C9cc3E40BfD2" \
-          }'
+              "client_id" : "${{ env.CLIENT_ID }}", \
+              "client_secret" : "${{ env.CLIENT_SECRET }}" \
+          }' \
         )
         
         # Extract access token from response
