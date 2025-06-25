@@ -52,3 +52,9 @@ exported-specs/
 api-specs
 openapi.yaml
 exchange.json
+
+api-spec
+
+categories.json
+
+secrets.txt

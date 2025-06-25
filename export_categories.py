@@ -75,10 +75,10 @@ def export_categories(access_token: str, org_id: str,asset_id: str, asset_versio
         print(f"Categories field not found: {e}")
 
 def main():
-    org_id = "1bb53e2e-0362-40c7-80cc-273290c8d74b"
-    asset_id = "openapi"
-    asset_version = "1.0.0"
-    access_token = "7c68ed7d-a07b-499c-824f-7271c406b35e"
+    org_id = os.getenv("ORG_ID")
+    asset_id = os.getenv("ASSET_ID")
+    asset_version = os.getenv("ASSET_VERSION")
+    access_token = os.getenv("ACCESS_TOKEN")
 
     export_categories(access_token, org_id, asset_id, asset_version)
 

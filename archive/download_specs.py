@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-MuleSoft Anypoint Exchange API Spec Downloader
+MuleSoft Anypoint Exchange Documentation and Categories Exporter
 
-This script downloads OpenAPI specifications, documentation, and metadata
+This script downloads documentation and extracts categories/metadata
 from MuleSoft Anypoint Exchange using the Platform API.
+Note: This script does NOT download OpenAPI specification files.
 """
 
 import os
@@ -12,6 +13,8 @@ import json
 import requests
 import yaml
 import zipfile
+import re
+import urllib.parse
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import time
@@ -33,15 +36,6 @@ try:
 except ImportError:
     MARKDOWNIFY_AVAILABLE = False
     print(" markdownify not available - HTML content will be saved as-is")
-
-import re
-
-
-def extract_image_alt_attributes(html_content: str) -> List[str]:
-    """Extract alt attributes from img tags in HTML content (backward compatibility)"""
-    img_pattern = r'<img[^>]+alt=["\']([^"\']+)["\'][^>]*>'
-    alt_attributes = re.findall(img_pattern, html_content, re.IGNORECASE)
-    return alt_attributes
 
 
 def extract_image_info(html_content: str) -> List[Dict[str, str]]:
@@ -74,7 +68,6 @@ def extract_image_info(html_content: str) -> List[Dict[str, str]]:
             if '/resources/' in src_url:
                 resource_path = src_url.split('/resources/')[-1]
                 # URL decode the resource path
-                import urllib.parse
                 resource_path = urllib.parse.unquote(resource_path)
         
         images.append({
@@ -282,32 +275,6 @@ class AnypointExchangeClient:
             print(f" Failed to get asset details for {asset_id}: {e}")
             return None
     
-    def download_asset_files(self, asset_id: str, version: str, org_id: str) -> Dict[str, Any]:
-        """Download files associated with an asset"""
-        url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}/files"
-        
-        params = {"organizationId": org_id}
-        
-        print(f" Fetching file list for {asset_id}:{version}")
-        print(f" GET {url}")
-        print(f" Parameters: {params}")
-        
-        try:
-            response = self.session.get(url, params=params)
-            print(f" Response Status: {response.status_code}")
-            response.raise_for_status()
-            
-            files_data = response.json()
-            print(f" Response Body: {truncate_json_response(files_data)}")
-            
-            files = files_data.get('files', [])
-            print(f" Found {len(files)} files for asset")
-            return files_data
-            
-        except requests.exceptions.RequestException as e:
-            print(f" Failed to get asset files for {asset_id}: {e}")
-            return {}
-    
     def get_portal_info(self, org_id: str, asset_id: str, version: str) -> Optional[Dict]:
         """Get portal information for an asset"""
         url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}/portal"
@@ -355,7 +322,6 @@ class AnypointExchangeClient:
     def get_portal_page_content(self, org_id: str, asset_id: str, version: str, page_path: str) -> Optional[Dict]:
         """Get content of a specific portal page using its path"""
         # URL encode the page path to handle spaces and special characters
-        import urllib.parse
         encoded_path = urllib.parse.quote(page_path, safe='/')
         url = f"{self.base_url}/exchange/api/v2/assets/{org_id}/{asset_id}/{version}/portal/pages/{encoded_path}"
         
@@ -383,10 +349,11 @@ class AnypointExchangeClient:
             # Handle as text/HTML content
             text_content = response.text
             if text_content.strip():
+                # In content replace resources/ with empty string to match downloaded image files
                 page_content = {
                     "path": page_path,
                     "content_type": content_type,
-                    "content": text_content,
+                    "content": text_content.replace('resources/', ""),
                     "content_length": len(text_content)
                 }
                 print(f" Response Body (Text): {text_content[:200]}{'...' if len(text_content) > 200 else ''}")
@@ -405,9 +372,8 @@ class AnypointExchangeClient:
             print(f" Failed to get page content for path {page_path}: {e}")
             return None
 
-    def get_resource_image(self, group_id: str, asset_id: str, version: str, resource_path: str) -> Optional[bytes]:
+    def get_resource_image(self, group_id: str, asset_id: str, version: str, resource_path: str, target_dir: Path = None) -> Optional[bytes]:
         """Fetch image resource using the resources API endpoint"""
-        from pathlib import Path
 
         url = f"{self.base_url}/exchange/api/v2/assets/{group_id}/{asset_id}/{version}/portal/resources/{resource_path}"
         print(f" GET {url}")
@@ -422,21 +388,24 @@ class AnypointExchangeClient:
             print(f" Response Status: {response.status_code}")
             
             if response.status_code == 200:
-                # Create filename with "resources/" prepended
-                filename = f"resources/{resource_path}"
+                if target_dir:
+                    # Use the resource path as the filename, preserving the original structure
+                    # Remove any leading "resources/" if present since we'll add it to target_dir
+                    clean_resource_path = resource_path
+                    if clean_resource_path.startswith("resources/"):
+                        clean_resource_path = clean_resource_path[10:]  # Remove "resources/" prefix
+                    
+                    # Create the file path within the target directory
+                    file_path = target_dir / resource_path
+                    
+                    # Ensure parent directories exist
+                    file_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    with open(file_path, 'wb') as f:
+                        f.write(response.content)
+                    
+                    print(f" Saved image: {file_path}")
                 
-                # Ensure it has .png extension if no extension present
-                if not any(filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.svg']):
-                    filename += '.png'
-                
-                # Create the file path and save
-                file_path = Path(filename)
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                with open(file_path, 'wb') as f:
-                    f.write(response.content)
-                
-                print(f" Saved image: {file_path}")
                 return response.content
             else:
                 print(f" Failed to download image: HTTP {response.status_code}")
@@ -579,41 +548,44 @@ def extract_categories_from_asset_details(asset_details: Dict[str, Any]) -> List
 def save_consolidated_categories(all_categories: List[Dict[str, Any]], output_dir: Path) -> bool:
     """Save consolidated categories to categories.json"""
     if not all_categories:
-        return False
+        print(" No categories to save")
+        return
     
-    # Remove duplicates based on tagKey
+    # Create a dictionary to track unique categories by tagKey
     unique_categories = {}
+    
     for category in all_categories:
-        tag_key = category['tagKey']
-        if tag_key not in unique_categories:
+        tag_key = category.get('tagKey', '')
+        if tag_key and tag_key not in unique_categories:
             unique_categories[tag_key] = category
-        else:
-            # Merge values if they're different
-            existing_values = set(unique_categories[tag_key]['value'])
-            new_values = set(category['value'])
-            merged_values = list(existing_values.union(new_values))
-            unique_categories[tag_key]['value'] = merged_values
     
-    categories_list = list(unique_categories.values())
+    # Convert back to list and sort by tagKey
+    consolidated_categories = list(unique_categories.values())
+    consolidated_categories.sort(key=lambda x: x.get('tagKey', ''))
+    
     categories_file = output_dir / "categories.json"
-    
     try:
         with open(categories_file, 'w', encoding='utf-8') as f:
-            json.dump(categories_list, f, indent=2, ensure_ascii=False)
+            json.dump(consolidated_categories, f, indent=2, ensure_ascii=False)
         
-        print(f" Saved consolidated categories: {categories_file}")
-        print(f" Total unique categories: {len(categories_list)}")
-        for category in categories_list:
-            print(f"  • {category['tagKey']}: {category['value']}")
+        print(f" Saved {len(consolidated_categories)} unique categories to: {categories_file}")
+        print(f" Total category entries processed: {len(all_categories)}")
+        print(f" Unique categories found: {len(consolidated_categories)}")
         
-        return True
+        # Print first few categories as examples
+        if consolidated_categories:
+            print(" Sample categories:")
+            for cat in consolidated_categories[:3]:
+                print(f"   - {cat.get('tagKey', 'Unknown')}: {cat.get('value', 'No value')}")
+            if len(consolidated_categories) > 3:
+                print(f"   ... and {len(consolidated_categories) - 3} more")
+                
     except Exception as e:
-        print(f" Failed to save categories.json: {e}")
-        return False
+        print(f" Error saving categories: {e}")
 
 
 def main():
-    """Main function to download API specs from Anypoint Exchange"""
+    """Main function to download documentation and extract categories from Anypoint Exchange"""
     
     start_time = time.time()
     # Environment variables are already loaded at the top of the file
@@ -624,7 +596,7 @@ def main():
     exchange_url = os.getenv('EXCHANGE_URL', 'https://anypoint.mulesoft.com')
     org_id = os.getenv('ORGANIZATION_ID')
     asset_id = os.getenv('ASSET_ID')
-    output_dir = os.getenv('OUTPUT_DIR', 'api-specs')
+    output_dir = os.getenv('OUTPUT_DIR', '../api-specs')
     include_docs = os.getenv('INCLUDE_DOCS', 'true').lower() == 'true'
     include_metadata = os.getenv('INCLUDE_METADATA', 'true').lower() == 'true'
 
@@ -641,7 +613,7 @@ def main():
         print(" Error: ORGANIZATION_ID environment variable is required")
         sys.exit(1)
     
-    print(f" Starting MuleSoft Anypoint Exchange API spec download...")
+    print(f" Starting MuleSoft Anypoint Exchange documentation and categories export...")
     print(f" Output directory: {output_dir}")
     print(f" Organization ID: {org_id}")
     print(f" Asset ID filter: {asset_id if asset_id else 'None (all assets)'}")
@@ -664,6 +636,14 @@ def main():
     output_path.mkdir(parents=True, exist_ok=True)
     print(f" Created output directory: {output_path.absolute()}")
     
+    # Create documentation and images directories at the root level
+    documentation_dir = output_path / "documentation"
+    images_dir = output_path / "images"
+    documentation_dir.mkdir(parents=True, exist_ok=True)
+    images_dir.mkdir(parents=True, exist_ok=True)
+    print(f" Created documentation directory: {documentation_dir.absolute()}")
+    print(f" Created images directory: {images_dir.absolute()}")
+    
     # Search for assets
     print("=" * 60)
     print(f" Searching for assets...")
@@ -679,7 +659,6 @@ def main():
     # Filter to latest versions
     latest_assets = get_latest_assets(assets)
     
-    downloaded_count = 0
     processed_count = 0
     docs_downloaded_count = 0
     all_categories = []
@@ -734,7 +713,7 @@ def main():
                 print(f" Saved portal pages: {pages_file}")
                 
                 # Save individual pages as separate files for easier access
-                pages_dir = asset_dir / "pages"
+                pages_dir = documentation_dir / f"{asset_asset_id}_{asset_version}"
                 pages_dir.mkdir(parents=True, exist_ok=True)
                 
                 for idx, page in enumerate(portal_pages):
@@ -790,40 +769,20 @@ def main():
                                 for i, image in enumerate(images):
                                     print(f"   Image {i+1}: alt='{image['alt_text']}', resource_path='{image['resource_path']}'")
 
-                                images_dir = asset_dir / "images"
-                                images_dir.mkdir(parents=True, exist_ok=True)
-
                                 # Fetch each image using the resources API
-                                for image in images:
+                                for img_idx, image in enumerate(images):
                                     encoded_resource_path = image['resource_path'].replace("resources/", "")
                                     print(f" Fetching image: {encoded_resource_path}")
                                     print(f"   Using API: /exchange/api/v2/assets/{asset.get('groupId')}/{asset_asset_id}/{asset_version}/portal/resources/{encoded_resource_path}")
-                                    image_content = client.get_resource_image(asset.get('groupId'), asset_asset_id, asset_version, encoded_resource_path)
+                                    image_content = client.get_resource_image(asset.get('groupId'), asset_asset_id, asset_version, encoded_resource_path, target_dir=images_dir)
 
                                     if image_content:
-                                        # Create safe filename from alt text
-                                        safe_img_name = "".join(c for c in image['alt_text'] if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-                                        if not safe_img_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg')):
-                                            # Extract extension from original alt text if present
-                                            if '.' in image['alt_text']:
-                                                ext = image['alt_text'].split('.')[-1].lower()
-                                                if ext in ['png', 'jpg', 'jpeg', 'gif', 'svg']:
-                                                    safe_img_name += f".{ext}"
-                                                else:
-                                                    safe_img_name += ".png"  # default extension
-                                            else:
-                                                safe_img_name += ".png"  # default extension
-
-                                        image_file = images_dir / safe_img_name
-                                        if save_file(image_content, image_file):
-                                            print(f" Saved image: {image_file}")
-                                            docs_downloaded_count += 1
-                                        else:
-                                            print(f" Failed to save image: {safe_img_name}")
+                                        docs_downloaded_count += 1
                                     else:
                                         print(f" Failed to fetch image: {image['resource_path']}")
-                            
-                            markdown_file = pages_dir / f"{markdown_name}.md"
+
+                            # Keep Same markdown file name to match title
+                            markdown_file = documentation_dir / f"{markdown_name}.md"
                             markdown_content = md(page_content['content'])
                             save_markdown(markdown_content, markdown_file)
                             print(f" Saved page content as Markdown: {markdown_file}")
@@ -831,87 +790,6 @@ def main():
                     
                     # Add small delay to avoid rate limiting
                     time.sleep(0.1)
-        
-        # Use files from asset details instead of separate API call
-        files = asset_details.get('files', []) if asset_details else []
-        
-        if not files:
-            print(f" No files found for asset {asset_asset_id}")
-            continue
-        
-        print(f" Found {len(files)} files to process")
-        
-        for j, file_info in enumerate(files, 1):
-            # Generate filename from classifier and packaging if fileName not present
-            classifier = file_info.get('classifier', 'unknown')
-            packaging = file_info.get('packaging', '')
-            file_name = file_info.get('fileName')
-
-            if classifier != 'oas':
-                print(f" Skip downloading non-OAS file: {file_name}")
-                continue
-
-            if not file_name:
-                file_name = f"{asset_asset_id}-{asset_version}-{classifier}"
-                if packaging:
-                    file_name += f".{packaging}"
-            
-            download_url = file_info.get('downloadURL')
-            
-            print(f"  Processing file {j}/{len(files)}: {file_name}")
-            print(f"  Classifier: {classifier}, Packaging: {packaging}")
-            
-            if not download_url:
-                print(f"  No download URL for file: {file_name}")
-                continue
-            
-            # Check if it's an OpenAPI spec file based on classifier or filename
-            is_openapi = (classifier and 'oas' in classifier.lower()) or \
-                        any(keyword in file_name.lower() for keyword in 
-                           ['openapi', 'swagger', 'api-spec', '.yaml', '.yml', '.json'])
-            
-            # Check if it's documentation
-            is_doc = any(keyword in file_name.lower() for keyword in 
-                        ['doc', 'readme', 'guide', '.md', '.html', '.pdf'])
-            
-            # Identify file type for logging
-            file_type = " OpenAPI Spec" if is_openapi else " Documentation" if is_doc else " Other"
-            print(f"  File type: {file_type}")
-            
-            # Skip non-relevant files if not including docs
-            if not include_docs and is_doc and not is_openapi:
-                print(f"  Skipping documentation file (include_docs=False)")
-                continue
-            
-            # Download file content
-            content = client.download_file_content(download_url, file_name)
-            
-            if content:
-                file_path = asset_dir / file_name
-                
-                # First save the file
-                if save_file(content, file_path):
-                    print(f"  Saved: {file_path.relative_to(output_path)}")
-                    
-                    # Check if it's a zip file and unzip it
-                    if is_zip_file(content):
-                        print(f"  Zip file detected: {file_name}")
-                        zip_dir = asset_dir / f"{file_name.rsplit('.', 1)[0]}_extracted"
-                        if unzip_file(file_path, zip_dir):
-                            print(f"  Successfully unzipped {file_name} to {zip_dir.name}")
-                        else:
-                            print(f"  Failed to unzip {file_name}")
-                    
-                    if is_openapi:
-                        downloaded_count += 1
-                        print(f"  OpenAPI spec count: {downloaded_count}")
-                else:
-                    print(f"  Failed to save: {file_name}")
-            else:
-                print(f"  Failed to download: {file_name}")
-            
-            # Add small delay to avoid rate limiting
-            time.sleep(0.1)
         
         print(f" Completed processing asset {i}/{len(latest_assets)}")
         print("-" * 40)
@@ -925,7 +803,6 @@ def main():
         "download_timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "total_assets_found": len(assets),
         "latest_assets_processed": len(latest_assets),
-        "specs_downloaded": downloaded_count,
         "docs_downloaded": docs_downloaded_count,
         "categories_extracted": len(all_categories),
         "unique_categories": len(set(cat['tagKey'] for cat in all_categories)) if all_categories else 0,
@@ -937,12 +814,11 @@ def main():
     save_json(summary, summary_file)
     
     print("\n" + "=" * 60)
-    print(" DOWNLOAD SUMMARY")
+    print(" EXPORT SUMMARY")
     print("=" * 60)
     print(f" Duration: {summary['duration_seconds']} seconds")
     print(f" Assets found: {summary['total_assets_found']}")
     print(f" Latest versions processed: {summary['latest_assets_processed']}")
-    print(f" API specs downloaded: {summary['specs_downloaded']}")
     print(f" Documentation downloaded: {summary['docs_downloaded']}")
     print(f" Categories extracted: {summary['categories_extracted']}")
     print(f" Unique categories: {summary['unique_categories']}")
@@ -952,7 +828,6 @@ def main():
     # Set GitHub Actions outputs
     if os.getenv('GITHUB_ACTIONS'):
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-            f.write(f"specs-count={downloaded_count}\n")
             f.write(f"docs-count={docs_downloaded_count}\n")
             f.write(f"categories-count={len(set(cat['tagKey'] for cat in all_categories)) if all_categories else 0}\n")
             f.write(f"output-path={output_path}\n")
@@ -960,11 +835,10 @@ def main():
     end_time = time.time()
     elapsed_time = end_time - start_time
     
-    print(f"\n Download completed in {elapsed_time:.2f} seconds!")
+    print(f"\n Export completed in {elapsed_time:.2f} seconds!")
     print(f" Total assets processed: {len(latest_assets)}")
-    print(f" OpenAPI specs downloaded: {downloaded_count}")
     print(f" Documentation items downloaded: {docs_downloaded_count}")
-    print(f" Files saved to: {output_path.absolute()}")
+    print(f" Categories extracted: {len(all_categories)}")
 
 
 if __name__ == "__main__":
