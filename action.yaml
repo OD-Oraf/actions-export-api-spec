@@ -22,20 +22,6 @@ inputs:
     required: false
     default: '1.0.0'
 
-
-outputs:
-  specs-count:
-    description: 'Number of API specifications downloaded'
-  
-  docs-count:
-    description: 'Number of documentation items downloaded'
-  
-  categories-count:
-    description: 'Number of categories extracted'
-  
-  output-path:
-    description: 'Path where files were downloaded'
-
 runs:
   using: 'composite'
   steps:

@@ -42,14 +42,13 @@ jobs:
         with:
           organization-id: ${{ inputs.organization_id }}
           asset-id: ${{ inputs.asset_id }}
-          output-directory: 'mulesoft-api-specs'
-          include-metadata: 'true'
+
           
           # Repository organization settings
-          repository-destination: '.'                    # Root of repository
-          documentation-path: 'docs/api-guides'          # Creates: documentation/docs/api-guides/
-          categories-path: 'metadata'                    # Creates: metadata/categories.json
-          specs-path: 'api-specifications'               # Creates: api-specifications/*.yaml
+#          repository-destination: '.'                    # Root of repository
+#          documentation-path: 'docs/api-guides'          # Creates: documentation/docs/api-guides/
+#          categories-path: 'metadata'                    # Creates: metadata/categories.json
+#          specs-path: 'api-specifications'               # Creates: api-specifications/*.yaml
           
           # Alternative configurations:
           # For simple organization:
@@ -61,74 +60,3 @@ jobs:
           # documentation-path: 'v2/user-guides'        # Creates: documentation/v2/user-guides/
           # categories-path: 'v2/metadata'               # Creates: v2/metadata/categories.json
           # specs-path: 'v2/openapi-specs'               # Creates: v2/openapi-specs/*.yaml
-      
-      - name: Display export results
-        run: |
-          echo " Export completed successfully!"
-          echo " Number of API specs downloaded: ${{ steps.export-specs.outputs.specs-count }}"
-          echo " Number of documentation items: ${{ steps.export-specs.outputs.docs-count }}"
-          echo " Number of categories extracted: ${{ steps.export-specs.outputs.categories-count }}"
-          echo " Files saved to: ${{ steps.export-specs.outputs.output-path }}"
-          echo ""
-          echo " Repository structure after export:"
-          echo " documentation/docs/api-guides/ - Markdown documentation files"
-          echo " metadata/ - categories.json file"
-          echo " api-specifications/ - OpenAPI specification files"
-          echo ""
-          echo " Actual directory contents:"
-          find . -name "*.md" -o -name "categories.json" -o -name "*.yaml" -o -name "*.yml" | head -20 || echo "No files found"
-          
-          if [ -f "mulesoft-api-specs/download_summary.json" ]; then
-            echo ""
-            echo " Download Summary:"
-            cat mulesoft-api-specs/download_summary.json
-          fi
-      
-      - name: Create deployment info
-        run: |
-          echo "# MuleSoft API Specs Export Results" > export-results.md
-          echo "" >> export-results.md
-          echo "**Export Date:** $(date)" >> export-results.md
-          echo "**Specs Downloaded:** ${{ steps.export-specs.outputs.specs-count }}" >> export-results.md
-          echo "**Documentation Items:** ${{ steps.export-specs.outputs.docs-count }}" >> export-results.md
-          echo "**Categories Extracted:** ${{ steps.export-specs.outputs.categories-count }}" >> export-results.md
-          echo "**Output Path:** ${{ steps.export-specs.outputs.output-path }}" >> export-results.md
-          echo "" >> export-results.md
-          echo "## Repository Organization" >> export-results.md
-          echo "- **Documentation:** \`documentation/docs/api-guides/\`" >> export-results.md
-          echo "- **Categories:** \`metadata/categories.json\`" >> export-results.md
-          echo "- **API Specifications:** \`api-specifications/\`" >> export-results.md
-          echo "" >> export-results.md
-          echo "## Files Downloaded" >> export-results.md
-          
-          # List API specifications
-          if [ -d "api-specifications" ]; then
-            echo "### OpenAPI Specifications" >> export-results.md
-            find api-specifications -type f -name "*.yaml" -o -name "*.yml" -o -name "*.json" | while read file; do
-              echo "- \`$file\`" >> export-results.md
-            done
-          fi
-          
-          # List documentation files
-          if [ -d "documentation/docs/api-guides" ]; then
-            echo "### Documentation Files" >> export-results.md
-            find documentation/docs/api-guides -type f -name "*.md" | while read file; do
-              echo "- \`$file\`" >> export-results.md
-            done
-          fi
-          
-          # List metadata files
-          if [ -f "metadata/categories.json" ]; then
-            echo "### Metadata Files" >> export-results.md
-            echo "- \`metadata/categories.json\`" >> export-results.md
-          fi
-      
-      - name: Upload export results summary
-        uses: actions/upload-artifact@v4
-        with:
-          name: export-summary
-          path: export-results.md
-          retention-days: 90
-      
-      # Note: The main API specs artifact is automatically uploaded by the action
-      # with the name 'mulesoft-api-specs'
