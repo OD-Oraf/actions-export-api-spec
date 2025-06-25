@@ -78,7 +78,7 @@ def main():
     org_id = "1bb53e2e-0362-40c7-80cc-273290c8d74b"
     asset_id = "openapi"
     asset_version = "1.0.0"
-    access_token = "54ba26c1-8c2d-4365-9bc1-cbbf4203b82c"
+    access_token = "7c68ed7d-a07b-499c-824f-7271c406b35e"
 
     export_categories(access_token, org_id, asset_id, asset_version)
 
