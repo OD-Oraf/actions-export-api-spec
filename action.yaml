@@ -11,6 +11,7 @@ inputs:
   organization-id:
     description: 'MuleSoft Organization ID'
     required: true
+    default: '1bb53e2e-0362-40c7-80cc-273290c8d74b'
   
   asset-id:
     description: 'Asset ID to download (optional - if not provided, downloads all assets)'
@@ -81,6 +82,8 @@ runs:
         ASSET_ID: ${{ inputs.asset-id }}
         ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
+        set -o xtrace
+        
         chmod +x ${{ github.action_path }}/export-api.sh
         ${{ github.action_path }}/export-api.sh
         
@@ -94,6 +97,7 @@ runs:
         ASSET_ID: ${{ inputs.asset-id }}
         ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
+        set -e
         python ${{ github.action_path }}/export_categories.py
         cat categories.json
         
