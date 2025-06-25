@@ -78,11 +78,11 @@ runs:
       env:
         CLIENT_ID: ${{ env.CLIENT_ID }}
         CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
-        ORG_ID: ${{ inputs.organization-id }}
+        ORGANIZATION_ID: ${{ inputs.organization-id }}
         ASSET_ID: ${{ inputs.asset-id }}
         ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
-        set -o xtrace
+        set -euxo pipefail
         
         chmod +x ${{ github.action_path }}/export-api.sh
         ${{ github.action_path }}/export-api.sh

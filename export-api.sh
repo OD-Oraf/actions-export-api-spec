@@ -12,7 +12,7 @@ set -euxo pipefail    # Exit on error, undefined variables, and pipe failures
 configure_credentials() {
   anypoint-cli-v4 conf client_id "$CLIENT_ID"
   anypoint-cli-v4 conf client_secret "$CLIENT_SECRET"
-  anypoint-cli-v4 conf organization "$ORG_ID"
+  anypoint-cli-v4 conf organization "$ORGANIZATION_ID"
 
   anypoint-cli-v4 account:environment:list
 }
