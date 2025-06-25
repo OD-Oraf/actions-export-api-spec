@@ -77,7 +77,7 @@ runs:
       env:
         CLIENT_ID: ${{ env.CLIENT_ID }}
         CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
-        ORGANIZATION_ID: ${{ inputs.organization-id }}
+        ORG_ID: ${{ inputs.organization-id }}
         ASSET_ID: ${{ inputs.asset-id }}
         ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
