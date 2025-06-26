@@ -146,7 +146,19 @@ runs:
         set -ex
         
         python ${{ github.action_path }}/export_documentation.py       
+
+    - name: Check exported files
+      shell: bash
+      run: |
+        echo "Files in ${{ inputs.documentation_output_dir }}:"
+        ls -la ${{ inputs.documentation_output_dir }}
         
+        echo "Files in ${{ inputs.categories_output_dir }}:"
+        ls -la ${{ inputs.categories_output_dir }}
+        
+        echo "Files in ${{ inputs.api_spec_output_dir }}:"
+        ls -la ${{ inputs.api_spec_output_dir }}
+
     - name: Debug - Show directory structure and environment
       if: always()
       shell: bash
