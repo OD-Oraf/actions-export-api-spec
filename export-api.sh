@@ -20,7 +20,6 @@ configure_credentials() {
 export_api_specs() {
   echo "📥 Downloading asset ${ASSET_ID}/${ASSET_VERSION} to ${EXPORT_DIR}..."
   anypoint-cli-v4 exchange:asset:download "${ASSET_ID}/${ASSET_VERSION}" ./"${EXPORT_DIR}"
-#  cd "${EXPORT_DIR}" && ls -t *.zip 2>/dev/null | head -1 | xargs -I {} unzip "{}"
 
   echo "📦 Processing downloaded files..."
   cd "${EXPORT_DIR}"
@@ -33,16 +32,31 @@ export_api_specs() {
       unzip -o "$zipfile"
       rm "$zipfile"  # Clean up zip file after extraction
     done
+    
+    # After extraction, check for YAML files and rename to asset ID
+    echo "🔍 Checking for YAML files to rename..."
+    yaml_files=(*.yaml *.yml)
+
+    
+    for pattern in "${yaml_files[@]}"; do
+      if [[ -f "$pattern" ]]; then
+        # Get the file extension
+        extension="${pattern##*.}"
+        target_name="${ASSET_ID}.${extension}"
+        
+        echo "  Renaming: $pattern → $target_name"
+        mv "$pattern" "$target_name"
+      fi
+    done
+    
+
   else
     echo "ℹ️  No zip files found to extract"
   fi
 
-  # List extracted files
-  echo "📄 Files in ${EXPORT_DIR}:"
+  # List final files
+  echo "📄 Final files in ${EXPORT_DIR}:"
   ls -la
-
-
-
 }
 
 configure_credentials
