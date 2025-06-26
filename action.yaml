@@ -145,8 +145,7 @@ runs:
         echo "=================================================="
         set -ex
         
-        python ${{ github.action_path }}/export_documentation.py
-        mv api-specs/documentation .
+        python ${{ github.action_path }}/export_documentation.py       
         
     - name: Debug - Show directory structure and environment
       if: always()
