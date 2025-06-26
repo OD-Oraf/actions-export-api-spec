@@ -38,6 +38,11 @@ inputs:
     required: false
     default: 'exchange-export'
 
+  dry_run:
+    description: 'If true, skip git commit and push operations'
+    required: false
+    default: 'false'
+
 runs:
   using: 'composite'
   steps:
@@ -147,17 +152,66 @@ runs:
         
         python ${{ github.action_path }}/export_documentation.py       
 
-    - name: Check exported files
+    - name: Check exported files and add to git
       shell: bash
       run: |
-        echo "Files in ${{ inputs.documentation_output_dir }}:"
-        ls -la ${{ inputs.documentation_output_dir }}
+        echo "🔍 Checking for exported files and adding to git..."
         
-        echo "Files in ${{ inputs.categories_output_dir }}:"
-        ls -la ${{ inputs.categories_output_dir }}
+        # Check and add documentation folder
+        if [ -d "${{ inputs.documentation_output_dir }}/documentation" ]; then
+          echo "✅ Documentation folder found: ${{ inputs.documentation_output_dir }}/documentation"
+          ls -la "${{ inputs.documentation_output_dir }}/documentation"
+          git add "${{ inputs.documentation_output_dir }}/documentation"
+          echo "📁 Added documentation folder to git"
+        else
+          echo "❌ Documentation folder not found: ${{ inputs.documentation_output_dir }}/documentation"
+        fi
         
-        echo "Files in ${{ inputs.api_spec_output_dir }}:"
-        ls -la ${{ inputs.api_spec_output_dir }}
+        # Check and add categories.json
+        if [ -f "${{ inputs.categories_output_dir }}/categories.json" ]; then
+          echo "✅ Categories file found: ${{ inputs.categories_output_dir }}/categories.json"
+          ls -la "${{ inputs.categories_output_dir }}/categories.json"
+          git add "${{ inputs.categories_output_dir }}/categories.json"
+          echo "📄 Added categories.json to git"
+        else
+          echo "❌ Categories file not found: ${{ inputs.categories_output_dir }}/categories.json"
+        fi
+        
+        # Check and add API spec files
+        SPEC_FILE="${{ inputs.api_spec_output_dir }}/${{ inputs.asset_id }}.yaml"
+        if [ -f "$SPEC_FILE" ]; then
+          echo "✅ API spec file found: $SPEC_FILE"
+          ls -la "$SPEC_FILE"
+          git add "$SPEC_FILE"
+          echo "📋 Added API spec file to git"
+        else
+          echo "❌ API spec file not found: $SPEC_FILE"
+          echo "🔍 Checking for other files in directory:"
+          if [ -d "${{ inputs.api_spec_output_dir }}" ]; then
+            ls -la "${{ inputs.api_spec_output_dir }}"
+          else
+            echo "Directory does not exist: ${{ inputs.api_spec_output_dir }}"
+          fi
+        fi
+        
+        # Show git status
+        echo "📊 Git status after adding files:"
+        git status --porcelain
+        
+        # Commit and push changes (only if not in dry run mode)
+        if [ "${{ inputs.dry_run }}" != "true" ]; then
+          echo "🚀 Committing and pushing changes..."
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update API specs, categories, and documentation"
+            git push
+          fi
+        else
+          echo "🔍 Dry run mode enabled - skipping git commit and push"
+        fi
 
     - name: Debug - Show directory structure and environment
       if: always()

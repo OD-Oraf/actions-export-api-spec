@@ -37,6 +37,11 @@ on:
         required: false
         type: string
         default: 'exchange-export'
+      dry_run:
+        description: 'Dry Run Mode'
+        required: false
+        type: boolean
+        default: false
 
 
 jobs:
@@ -64,3 +69,4 @@ jobs:
           documentation_output_dir: ${{ inputs.documentation_output_dir || 'exchange-export' }}
           categories_output_dir: ${{ inputs.categories_output_dir || 'exchange-export' }}
           api_spec_output_dir: ${{ inputs.api_spec_output_dir || 'exchange-export' }}
+          dry_run: ${{ inputs.dry_run && 'true' || 'false' }}
