@@ -71,7 +71,7 @@ runs:
           }' | tee response.json
         
         # Extract access token from response
-        ACCESS_TOKEN=$(cat response.json | jq -r '.accessToken')
+        ACCESS_TOKEN=$(cat response.json | jq -r '.access_token')
         
         if [ -z "$ACCESS_TOKEN" ]; then
           echo "❌ Failed to get access token"
@@ -94,7 +94,7 @@ runs:
         ASSET_ID: ${{ inputs.asset-id }}
         ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
-        set -euxo pipefail
+        set -ex
         
         chmod +x ${{ github.action_path }}/export-api.sh
         ${{ github.action_path }}/export-api.sh
@@ -126,7 +126,7 @@ runs:
         ASSET_VERSION: ${{ inputs.asset-version }}
         OUTPUT_DIR: documentation-export
       run: |
-        set -euxo pipefail
+        set -ex
         
         python ${{ github.action_path }}/export_documentation.py
         mv api-specs/documentation .
