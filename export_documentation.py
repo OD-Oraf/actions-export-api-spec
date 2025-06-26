@@ -495,9 +495,11 @@ def main():
             # Add small delay to avoid rate limiting
             time.sleep(0.1)
 
-        # Clean up {asset_id}_{asset_version}_pages directory
+        # Clean up asset_dir and pages_dir directory
         if pages_dir.exists():
             shutil.rmtree(pages_dir)
+        if asset_dir.exists():
+            shutil.rmtree(asset_dir)
 
     # Create summary file
     summary = {
@@ -528,6 +530,10 @@ def main():
 
     print(f"\n Documentation extraction completed in {elapsed_time:.2f} seconds!")
     print(f" Documentation items downloaded: {docs_downloaded_count}")
+
+    # Clean up summary file
+    if summary_file.exists():
+        os.remove(summary_file)
 
 
 if __name__ == "__main__":
