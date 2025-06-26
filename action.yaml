@@ -155,6 +155,8 @@ runs:
     - name: Check exported files and add to git
       shell: bash
       run: |
+        set -ex
+        
         echo "🔍 Checking for exported files and adding to git..."
         
         # Check and add documentation folder

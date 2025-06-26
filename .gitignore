@@ -49,12 +49,6 @@ exported-specs/
 .env.local
 
 
-api-specs
-openapi.yaml
-exchange.json
 
-api-spec
-
-categories.json
 
 secrets.txt
