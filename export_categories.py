@@ -66,6 +66,10 @@ def export_categories(access_token: str, org_id: str,asset_id: str, asset_versio
             print("Categories saved to categories.json")
         else:
             print("No categories found")
+            # Create empty categories file
+            with open("categories.json", "w") as f:
+                json.dump([], f, indent=2)
+            print("Empty categories.json file created")
 
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")
