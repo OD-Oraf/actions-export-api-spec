@@ -44,8 +44,13 @@ export_api_specs() {
         extension="${pattern##*.}"
         target_name="${ASSET_ID}.${extension}"
         
-        echo "  Renaming: $pattern → $target_name"
-        mv "$pattern" "$target_name"
+        # Always perform the rename operation, even if names are the same
+        if [[ "$pattern" == "$target_name" ]]; then
+          echo "  File already has correct name: $pattern"
+        else
+          echo "  Renaming: $pattern → $target_name"
+          mv "$pattern" "$target_name"
+        fi
       fi
     done
     
