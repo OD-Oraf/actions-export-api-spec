@@ -18,8 +18,8 @@ configure_credentials() {
 }
 
 export_api_specs() {
-  anypoint-cli-v4 exchange:asset:download "$ASSET_ID/${ASSET_VERSION}" ./api-spec
-  cd api-spec && ls -t *.zip 2>/dev/null | head -1 | xargs -I {} unzip "{}" && mv *.yaml ../
+  anypoint-cli-v4 exchange:asset:download "${ASSET_ID}/${ASSET_VERSION}" ./"${EXPORT_DIR}"
+  cd "${EXPORT_DIR}" && ls -t *.zip 2>/dev/null | head -1 | xargs -I {} unzip "{}"
 
 
 }

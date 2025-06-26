@@ -106,6 +106,8 @@ runs:
         
     - name: Download API specifications using Anypoint CLI
       shell: bash
+      env:
+        EXPORT_DIR: ${{ inputs.api_spec_output_dir }}
       run: |
         echo "=================================================="
         echo " DOWNLOADING API SPECIFICATION FILE"
