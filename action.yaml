@@ -23,6 +23,21 @@ inputs:
     required: false
     default: '1.0.0'
 
+  documentation_output_dir:
+    description: 'Output directory for documentation'
+    required: false
+    default: 'exchange-export'
+
+  categories_output_dir:
+    description: 'Output directory for categories'
+    required: false
+    default: 'exchange-export'
+
+  api_spec_output_dir:
+    description: 'Output directory for OpenAPI specifications'
+    required: false
+    default: 'exchange-export'
+
 runs:
   using: 'composite'
   steps:
@@ -44,6 +59,9 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
+        echo "=================================================="
+        echo " SETTING UP ENVIRONMENT VARIABLES"
+        echo "=================================================="
         set -euxo pipefail
         
         echo "🔑 Setting environment variables..."
@@ -58,8 +76,10 @@ runs:
         CLIENT_ID: ${{ env.CLIENT_ID }}
         CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
       run: |
+        echo "=================================================="
+        echo " GENERATING MULESOFT ACCESS TOKEN"
+        echo "=================================================="
         set -ex
-        echo "🔐 Generating MuleSoft access token..."
         
         # Make OAuth2 request to get access token
         curl --location 'https://anypoint.mulesoft.com/accounts/api/v2/oauth2/token' \
@@ -87,17 +107,26 @@ runs:
     - name: Download API specifications using Anypoint CLI
       shell: bash
       run: |
+        echo "=================================================="
+        echo " DOWNLOADING API SPECIFICATION FILE"
+        echo "=================================================="
         set -ex
         
         chmod +x ${{ github.action_path }}/export-api.sh
         ${{ github.action_path }}/export-api.sh
+        mv ${{ env.asset_id }}.yaml ${{ inputs.api_spec_output_dir }}
+        
         
     - name: Export categories metadata
       shell: bash
       run: |
+        echo "=================================================="
+        echo "EXPORTING CATEGORIES"
+        echo "=================================================="
         set -eu pipefail
         python ${{ github.action_path }}/export_categories.py
         cat categories.json
+        mv categories.json ${{ inputs.categories_output_dir }}
         
     - name: Export documentation
       shell: bash
@@ -108,8 +137,11 @@ runs:
         ORGANIZATION_ID: ${{ inputs.organization-id }}
         ASSET_ID: ${{ inputs.asset-id }}
         ASSET_VERSION: ${{ inputs.asset-version }}
-        OUTPUT_DIR: documentation-export
+        OUTPUT_DIR: ${{ inputs.documentation_output_dir }}
       run: |
+        echo "=================================================="
+        echo "EXPORTING DOCUMENTATION"
+        echo "=================================================="
         set -ex
         
         python ${{ github.action_path }}/export_documentation.py
@@ -119,6 +151,9 @@ runs:
       if: always()
       shell: bash
       run: |
+        echo "=================================================="
+        echo "🔍 DEBUG: FINAL SYSTEM STATE"
+        echo "=================================================="
         set -ex
         
         echo "🔍 Installing tree for directory visualization..."
