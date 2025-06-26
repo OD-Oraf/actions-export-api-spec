@@ -50,7 +50,7 @@ runs:
         echo "ORGANIZATION_ID=${{ inputs.organization-id }}" >> $GITHUB_ENV
         echo "ASSET_ID=${{ inputs.asset-id }}" >> $GITHUB_ENV
         echo "ASSET_VERSION=${{ inputs.asset-version }}" >> $GITHUB_ENV
-        echo "EXCHANGE_URL=$${{ inputs.exchange-url }}" >> $GITHUB_ENV
+        echo "EXCHANGE_URL=${{ inputs.exchange-url }}" >> $GITHUB_ENV
 
     - name: Generate MuleSoft Access Token
       shell: bash

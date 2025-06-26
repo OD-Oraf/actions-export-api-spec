@@ -17,10 +17,12 @@ on:
         required: false
         type: string
         default: 'openapi'
-  
-#  schedule:
-#    # Run every Monday at 2 AM UTC
-#    - cron: '0 2 * * 1'
+      asset_versiojn:
+        description: 'Specific Asset Version (optional)'
+        required: false
+        type: string
+        default: '1.0.0'
+
 
 jobs:
   export-api-specs:
@@ -41,8 +43,9 @@ jobs:
           CLIENT_ID: ${{  secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{  secrets.CLIENT_SECRET }}
         with:
-          organization-id: ${{ inputs.organization_id }}
-          asset-id: ${{ inputs.asset_id }}
+          organization-id: ${{ inputs.organization_id || '1bb53e2e-0362-40c7-80cc-273290c8d74b' }}
+          asset-id: ${{ inputs.asset_id || 'openapi' }}
+          asset-version: ${{ inputs.asset_version || '1.0.0' }}
 
           
           # Repository organization settings
