@@ -47,10 +47,10 @@ runs:
         set -euxo pipefail
         
         echo "🔑 Setting environment variables..."
-        echo "ORGANIZATION_ID=$ORGANIZATION_ID" >> $GITHUB_ENV
-        echo "ASSET_ID=$ASSET_ID" >> $GITHUB_ENV
-        echo "ASSET_VERSION=$ASSET_VERSION" >> $GITHUB_ENV
-        echo "EXCHANGE_URL=$EXCHANGE_URL" >> $GITHUB_ENV
+        echo "ORGANIZATION_ID=${{ inputs.organization-id }}" >> $GITHUB_ENV
+        echo "ASSET_ID=${{ inputs.asset-id }}" >> $GITHUB_ENV
+        echo "ASSET_VERSION=${{ inputs.asset-version }}" >> $GITHUB_ENV
+        echo "EXCHANGE_URL=$${{ inputs.exchange-url }}" >> $GITHUB_ENV
 
     - name: Generate MuleSoft Access Token
       shell: bash
