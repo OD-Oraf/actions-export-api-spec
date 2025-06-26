@@ -18,8 +18,29 @@ configure_credentials() {
 }
 
 export_api_specs() {
+  echo "📥 Downloading asset ${ASSET_ID}/${ASSET_VERSION} to ${EXPORT_DIR}..."
   anypoint-cli-v4 exchange:asset:download "${ASSET_ID}/${ASSET_VERSION}" ./"${EXPORT_DIR}"
-  cd "${EXPORT_DIR}" && ls -t *.zip 2>/dev/null | head -1 | xargs -I {} unzip "{}"
+#  cd "${EXPORT_DIR}" && ls -t *.zip 2>/dev/null | head -1 | xargs -I {} unzip "{}"
+
+  echo "📦 Processing downloaded files..."
+  cd "${EXPORT_DIR}"
+
+  # Check if zip files exist and extract them
+  if ls *.zip 1> /dev/null 2>&1; then
+    echo "🔓 Found zip files, extracting..."
+    for zipfile in *.zip; do
+      echo "  Extracting: $zipfile"
+      unzip -o "$zipfile"
+      rm "$zipfile"  # Clean up zip file after extraction
+    done
+  else
+    echo "ℹ️  No zip files found to extract"
+  fi
+
+  # List extracted files
+  echo "📄 Files in ${EXPORT_DIR}:"
+  ls -la
+
 
 
 }
