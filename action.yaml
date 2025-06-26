@@ -3,22 +3,22 @@ description: 'Downloads OpenAPI specifications, categories, tags, and documentat
 author: 'Your Organization'
 
 inputs:
-  exchange-url:
+  exchange_url:
     description: 'MuleSoft Anypoint Exchange URL'
     required: false
     default: 'https://anypoint.mulesoft.com'
   
-  organization-id:
+  organization_id:
     description: 'MuleSoft Organization ID'
     required: true
     default: '1bb53e2e-0362-40c7-80cc-273290c8d74b'
   
-  asset-id:
+  asset_id:
     description: 'Asset ID to download (optional - if not provided, downloads all assets)'
     required: false
     default: 'openapi'
   
-  asset-version:
+  asset_version:
     description: 'Asset version to download'
     required: false
     default: '1.0.0'
@@ -65,10 +65,10 @@ runs:
         set -euxo pipefail
         
         echo "🔑 Setting environment variables..."
-        echo "ORGANIZATION_ID=${{ inputs.organization-id }}" >> $GITHUB_ENV
-        echo "ASSET_ID=${{ inputs.asset-id }}" >> $GITHUB_ENV
-        echo "ASSET_VERSION=${{ inputs.asset-version }}" >> $GITHUB_ENV
-        echo "EXCHANGE_URL=${{ inputs.exchange-url }}" >> $GITHUB_ENV
+        echo "ORGANIZATION_ID=${{ inputs.organization_id }}" >> $GITHUB_ENV
+        echo "ASSET_ID=${{ inputs.asset_id }}" >> $GITHUB_ENV
+        echo "ASSET_VERSION=${{ inputs.asset_version }}" >> $GITHUB_ENV
+        echo "EXCHANGE_URL=${{ inputs.exchange_url }}" >> $GITHUB_ENV
 
     - name: Generate MuleSoft Access Token
       shell: bash
@@ -134,10 +134,10 @@ runs:
       env:
         CLIENT_ID: ${{ env.CLIENT_ID }}
         CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
-        EXCHANGE_URL: ${{ inputs.exchange-url }}
-        ORGANIZATION_ID: ${{ inputs.organization-id }}
-        ASSET_ID: ${{ inputs.asset-id }}
-        ASSET_VERSION: ${{ inputs.asset-version }}
+        EXCHANGE_URL: ${{ inputs.exchange_url }}
+        ORGANIZATION_ID: ${{ inputs.organization_id }}
+        ASSET_ID: ${{ inputs.asset_id }}
+        ASSET_VERSION: ${{ inputs.asset_version }}
         OUTPUT_DIR: ${{ inputs.documentation_output_dir }}
       run: |
         echo "=================================================="

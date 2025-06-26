@@ -22,6 +22,21 @@ on:
         required: false
         type: string
         default: '1.0.0'
+      documentation_output_dir:
+        description: 'Documentation Output Directory'
+        required: false
+        type: string
+        default: 'exchange-export'
+      categories_output_dir:
+        description: 'Categories Output Directory'
+        required: false
+        type: string
+        default: 'exchange-export'
+      api_spec_output_dir:
+        description: 'API Spec Output Directory'
+        required: false
+        type: string
+        default: 'exchange-export'
 
 
 jobs:
@@ -36,31 +51,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Export API Specs from MuleSoft Anypoint Exchange
+      - name: Export MuleSoft API
         uses: ./
-        id: export-specs
         env:
-          CLIENT_ID: ${{  secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{  secrets.CLIENT_SECRET }}
+          CLIENT_ID: ${{  secrets.MULESOFT_CLIENT_ID }}
+          CLIENT_SECRET: ${{  secrets.MULESOFT_CLIENT_SECRET }}
         with:
-          organization-id: ${{ inputs.organization_id || '1bb53e2e-0362-40c7-80cc-273290c8d74b' }}
-          asset-id: ${{ inputs.asset_id || 'openapi' }}
-          asset-version: ${{ inputs.asset_version || '1.0.0' }}
-
-          
-          # Repository organization settings
-#          repository-destination: '.'                    # Root of repository
-#          documentation-path: 'docs/api-guides'          # Creates: documentation/docs/api-guides/
-#          categories-path: 'metadata'                    # Creates: metadata/categories.json
-#          specs-path: 'api-specifications'               # Creates: api-specifications/*.yaml
-          
-          # Alternative configurations:
-          # For simple organization:
-          # documentation-path: ''                       # Creates: documentation/
-          # categories-path: '.'                         # Creates: categories.json (root)
-          # specs-path: '.'                              # Creates: *.yaml (root)
-          
-          # For version-specific organization:
-          # documentation-path: 'v2/user-guides'        # Creates: documentation/v2/user-guides/
-          # categories-path: 'v2/metadata'               # Creates: v2/metadata/categories.json
-          # specs-path: 'v2/openapi-specs'               # Creates: v2/openapi-specs/*.yaml
+          exchange_url: 'https://anypoint.mulesoft.com'
+          organization_id: ${{ inputs.organization_id || '1bb53e2e-0362-40c7-80cc-273290c8d74b' }}
+          asset_id: ${{ inputs.asset_id || 'openapi' }}
+          asset_version: ${{ inputs.asset_version || '1.0.0' }}
+          documentation_output_dir: ${{ inputs.documentation_output_dir || 'exchange-export' }}
+          categories_output_dir: ${{ inputs.categories_output_dir || 'exchange-export' }}
+          api_spec_output_dir: ${{ inputs.api_spec_output_dir || 'exchange-export' }}
