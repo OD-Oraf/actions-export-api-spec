@@ -87,12 +87,6 @@ runs:
 
     - name: Download API specifications using Anypoint CLI
       shell: bash
-      env:
-        CLIENT_ID: ${{ env.CLIENT_ID }}
-        CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
-        ORGANIZATION_ID: ${{ inputs.organization-id }}
-        ASSET_ID: ${{ inputs.asset-id }}
-        ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
         set -ex
         
@@ -101,21 +95,14 @@ runs:
         
     
     - name: Export categories metadata
-      if: ${{ inputs.include-metadata == 'true' }}
       shell: bash
-      env:
-        ACCESS_TOKEN: ${{ env.ACCESS_TOKEN }}
-        ORGANIZATION_ID: ${{ inputs.organization-id }}
-        ASSET_ID: ${{ inputs.asset-id }}
-        ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
-        set -euxo pipefail
+        set -eu pipefail
         python ${{ github.action_path }}/export_categories.py
         cat categories.json
         
     
     - name: Export documentation
-      if: ${{ inputs.include-documentation == 'true' }}
       shell: bash
       env:
         CLIENT_ID: ${{ env.CLIENT_ID }}
