@@ -108,7 +108,7 @@ runs:
         ASSET_ID: ${{ inputs.asset-id }}
         ASSET_VERSION: ${{ inputs.asset-version }}
       run: |
-        set -e
+        set -euxo pipefail
         python ${{ github.action_path }}/export_categories.py
         cat categories.json
         
@@ -125,6 +125,8 @@ runs:
         ASSET_VERSION: ${{ inputs.asset-version }}
         OUTPUT_DIR: documentation-export
       run: |
+        set -euxo pipefail
+        
         python ${{ github.action_path }}/export_documentation.py
         mv api-specs/documentation .
         
