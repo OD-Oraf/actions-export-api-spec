@@ -40,7 +40,18 @@ runs:
       shell: bash
       run: |
         npm install -g anypoint-cli-v4
-    
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        set -euxo pipefail
+        
+        echo "🔑 Setting environment variables..."
+        echo "ORGANIZATION_ID=$ORGANIZATION_ID" >> $GITHUB_ENV
+        echo "ASSET_ID=$ASSET_ID" >> $GITHUB_ENV
+        echo "ASSET_VERSION=$ASSET_VERSION" >> $GITHUB_ENV
+        echo "EXCHANGE_URL=$EXCHANGE_URL" >> $GITHUB_ENV
+
     - name: Generate MuleSoft Access Token
       shell: bash
       env:
