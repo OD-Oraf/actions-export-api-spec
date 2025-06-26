@@ -75,7 +75,7 @@ def export_categories(access_token: str, org_id: str,asset_id: str, asset_versio
         print(f"Categories field not found: {e}")
 
 def main():
-    org_id = os.getenv("ORG_ID")
+    org_id = os.getenv("ORGANIZATION_ID")
     asset_id = os.getenv("ASSET_ID")
     asset_version = os.getenv("ASSET_VERSION")
     access_token = os.getenv("ACCESS_TOKEN")

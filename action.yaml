@@ -118,7 +118,72 @@ runs:
         python ${{ github.action_path }}/export_documentation.py
         mv api-specs/documentation .
         
-    
+    - name: Debug - Show directory structure and environment
+      shell: bash
+      run: |
+        set -ex
+        
+        echo "🔍 Installing tree for directory visualization..."
+        sudo apt-get update -qq
+        sudo apt-get install -y tree
+        
+        echo ""
+        echo "📁 Current working directory:"
+        pwd
+        
+        echo ""
+        echo "🌳 Directory tree structure:"
+        tree -a -L 3 || ls -la
+        
+        echo ""
+        echo "📋 Environment variables (filtered for MuleSoft):"
+        env | grep -E "(CLIENT_ID|CLIENT_SECRET|ORGANIZATION_ID|ASSET_ID|ASSET_VERSION|ACCESS_TOKEN|EXCHANGE_URL)" | sed 's/CLIENT_SECRET=.*/CLIENT_SECRET=***REDACTED***/' || echo "No MuleSoft environment variables found"
+        
+        echo ""
+        echo "📄 Files in current directory:"
+        ls -la
+        
+        echo ""
+        echo "📄 YAML/JSON files found:"
+        find . -name "*.yaml" -o -name "*.yml" -o -name "*.json" | head -20 || echo "No YAML/JSON files found"
+        
+        echo ""
+        echo "📄 Categories file content (if exists):"
+        if [ -f "categories.json" ]; then
+          echo "categories.json found:"
+          cat categories.json | head -50
+        else
+          echo "categories.json not found"
+        fi
+        
+        echo ""
+        echo "📁 Documentation directory (if exists):"
+        if [ -d "documentation" ]; then
+          echo "documentation/ directory found:"
+          ls -la documentation/
+          echo ""
+          echo "Documentation subdirectories:"
+          find documentation/ -type d | head -10
+        else
+          echo "documentation/ directory not found"
+        fi
+        
+        echo ""
+        echo "📁 API spec directory (if exists):"
+        if [ -d "api-spec" ]; then
+          echo "api-spec/ directory found:"
+          ls -la api-spec/
+        else
+          echo "api-spec/ directory not found"
+        fi
+        
+        echo ""
+        echo "💾 Disk usage:"
+        du -sh . 2>/dev/null || echo "Could not calculate disk usage"
+        
+        echo ""
+        echo "🔍 Debug complete!"
+        
 #    - name: Move files to repository destination
 #      shell: bash
 #      run: |
