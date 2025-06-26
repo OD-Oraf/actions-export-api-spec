@@ -7,6 +7,7 @@ It downloads portal information, pages, and resources (images) for specified ass
 """
 
 import os
+import shutil
 import sys
 import json
 import requests
@@ -402,8 +403,11 @@ def main():
         print(f" Saved portal pages: {pages_file}")
 
         # Save individual pages as separate files for easier access
-        pages_dir = documentation_dir / f"{asset_id}_{asset_version}"
+        pages_dir = documentation_dir / f"{asset_id}_{asset_version}_pages"
         pages_dir.mkdir(parents=True, exist_ok=True)
+
+        # Used to rename images for local reference in markdown
+        image_count = 0
 
         for idx, page in enumerate(portal_pages):
             page_title = page.get('title', f'page_{idx}')
@@ -455,26 +459,25 @@ def main():
                     new_image_name = ""
 
                     if images:
-                        print(f" Found {len(images)} images in page content")
-
-
-                        # Debug: Print image details
-                        for i, image in enumerate(images):
-                            print(f"   Image {i + 1}: alt='{image['alt_text']}', resource_path='{image['resource_path']}'")
-                            image_src_path = image['src_url']
-                            print(f"image_src_path: {image_src_path}")
+                        print(f"\n Found {len(images)} images in page {page_path}\n")
 
                         # Fetch each image using the resources API
                         for img_idx, image in enumerate(images):
+                            print(f"\n   Image {img_idx + 1}: alt='{image['alt_text']}', resource_path='{image['resource_path']}'")
+                            image_src_path = image['src_url']
+                            print(f"image_src_path: {image_src_path}")
+
                             encoded_resource_path = image['resource_path'].replace("resources/", "")
                             print(f" Fetching image: {encoded_resource_path}")
                             print(
                                 f"   Using API: /exchange/api/v2/assets/{org_id}/{asset_id}/{asset_version}/portal/resources/{encoded_resource_path}")
-                            new_image_name = f"image_{img_idx}.png"
+                            new_image_name = f"image_{image_count}.png"
                             image_content = client.get_resource_image(org_id, asset_id, asset_version, f"{encoded_resource_path}", new_image_name, target_dir=images_dir)
+                            image_count += 1
 
                             # Replace image url with local image path
                             if image_src_path in page_content['content']:
+                                print(f"\n Replacing '{image_src_path}' with '{new_image_name}' in page content")
                                 page_content['content'] = page_content['content'].replace(f"{image_src_path}", f"images/{new_image_name}")
 
                             if image_content:
@@ -491,6 +494,10 @@ def main():
 
             # Add small delay to avoid rate limiting
             time.sleep(0.1)
+
+        # Clean up {asset_id}_{asset_version}_pages directory
+        if pages_dir.exists():
+            shutil.rmtree(pages_dir)
 
     # Create summary file
     summary = {
