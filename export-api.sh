@@ -4,7 +4,7 @@
 # This script downloads OpenAPI specifications from MuleSoft Anypoint Exchange using the Anypoint CLI
 # It uses the same .env file approach as the Python download_specs.py script
 
-set -euxo pipefail    # Exit on error, undefined variables, and pipe failures
+set -ex    # Exit on error, undefined variables, and pipe failures
 
 
 
