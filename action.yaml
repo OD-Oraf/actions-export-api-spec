@@ -116,7 +116,6 @@ runs:
         
         chmod +x ${{ github.action_path }}/export-api.sh
         ${{ github.action_path }}/export-api.sh
-        mv ${{ env.asset_id }}.yaml ${{ inputs.api_spec_output_dir }}
         
         
     - name: Export categories metadata
