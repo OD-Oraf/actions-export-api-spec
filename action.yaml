@@ -58,20 +58,20 @@ runs:
         CLIENT_ID: ${{ env.CLIENT_ID }}
         CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
       run: |
-        set -e
+        set -ex
         echo "🔐 Generating MuleSoft access token..."
         
         # Make OAuth2 request to get access token
-        RESPONSE=$(curl --location 'https://anypoint.mulesoft.com/accounts/api/v2/oauth2/token' \
+        curl --location 'https://anypoint.mulesoft.com/accounts/api/v2/oauth2/token' \
           --header 'Content-Type: application/json' \
           --data '{
               "grant_type" : "client_credentials",
               "client_id" : "${{ env.CLIENT_ID }}",
               "client_secret" : "${{ env.CLIENT_SECRET }}"
-          }')
+          }' | tee response.json
         
         # Extract access token from response
-        ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
+        ACCESS_TOKEN=$(cat response.json | jq -r '.accessToken')
         
         if [ -z "$ACCESS_TOKEN" ]; then
           echo "❌ Failed to get access token"
@@ -84,6 +84,7 @@ runs:
         # Make access token available to subsequent steps
         echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
     
+
     - name: Download API specifications using Anypoint CLI
       shell: bash
       env:
