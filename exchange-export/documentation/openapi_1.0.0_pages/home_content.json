@@ -1,0 +1,6 @@
+{
+  "path": "home",
+  "content_type": "text/html; charset=utf-8",
+  "content": "<h2 id=\"home\">Home</h2><p>Sample text for home page</p><p><img src=\"https://anypoint.mulesoft.com/exchange/1bb53e2e-0362-40c7-80cc-273290c8d74b/openapi/1.0.0/Screenshot%202025-06-24%20at%202.58.56%C3%A2%C2%80%C2%AFAM-25cc5382-d542-4e22-9eaa-c0d8ccbc81e7.png\" alt=\"openapi-screenshot.png\"></p><p><img src=\"https://anypoint.mulesoft.com/exchange/1bb53e2e-0362-40c7-80cc-273290c8d74b/openapi/1.0.0/Screenshot%202024-12-19%20at%207.17.56%C3%A2%C2%80%C2%AFPM-a4b96366-5dfd-478c-b022-4f9a1fab86b8.png\" alt=\"obsidian-screenshot.png\"></p>",
+  "content_length": 550
+}
