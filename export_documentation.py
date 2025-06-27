@@ -463,11 +463,11 @@ def main():
 
                         # Fetch each image using the resources API
                         for img_idx, image in enumerate(images):
-                            print(f"\n   Image {img_idx + 1}: alt='{image['alt_text']}', resource_path='{image['resource_path']}'")
+                            print(f"\n   Image {img_idx + 1}: src_url='{image['src_url']}', resource_path='{image['resource_path']}'")
                             image_src_path = image['src_url']
                             print(f"image_src_path: {image_src_path}")
 
-                            encoded_resource_path = image['resource_path'].replace("resources/", "")
+                            encoded_resource_path = image['src_url'].split('/')[-1] # Get the last part of the URL
                             print(f" Fetching image: {encoded_resource_path}")
                             print(
                                 f"   Using API: /exchange/api/v2/assets/{org_id}/{asset_id}/{asset_version}/portal/resources/{encoded_resource_path}")
@@ -496,10 +496,10 @@ def main():
             time.sleep(0.1)
 
         # Clean up asset_dir and pages_dir directory
-        if pages_dir.exists():
-            shutil.rmtree(pages_dir)
-        if asset_dir.exists():
-            shutil.rmtree(asset_dir)
+        # if pages_dir.exists():
+        #     shutil.rmtree(pages_dir)
+        # if asset_dir.exists():
+        #     shutil.rmtree(asset_dir)
 
     # Create summary file
     summary = {
