@@ -64,6 +64,8 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
+        echo "::group::Set environment variables"
+        
         echo "=================================================="
         echo " SETTING UP ENVIRONMENT VARIABLES"
         echo "=================================================="
@@ -74,6 +76,8 @@ runs:
         echo "ASSET_ID=${{ inputs.asset_id }}" >> $GITHUB_ENV
         echo "ASSET_VERSION=${{ inputs.asset_version }}" >> $GITHUB_ENV
         echo "EXCHANGE_URL=${{ inputs.exchange_url }}" >> $GITHUB_ENV
+        
+        echo "::endgroup::"
 
     - name: Generate MuleSoft Access Token
       shell: bash
@@ -81,6 +85,8 @@ runs:
         CLIENT_ID: ${{ env.CLIENT_ID }}
         CLIENT_SECRET: ${{ env.CLIENT_SECRET }}
       run: |
+        echo "::group::Generate MuleSoft Access Token"
+        
         echo "=================================================="
         echo " GENERATING MULESOFT ACCESS TOKEN"
         echo "=================================================="
@@ -109,16 +115,19 @@ runs:
         # Make access token available to subsequent steps
         echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
         
+        echo "::endgroup::"
+        
     - name: Download API specifications using Anypoint CLI
       shell: bash
       env:
         EXPORT_DIR: ${{ inputs.api_spec_output_dir }}
       run: |
+        echo "::group::Download API specifications using Anypoint CLI"
+        
         echo "=================================================="
         echo " DOWNLOADING API SPECIFICATION FILE"
         echo "=================================================="
         set -ex
-        echo "::group::Expoirting API specs"
         
         chmod +x ${{ github.action_path }}/export-api.sh
         ${{ github.action_path }}/export-api.sh
@@ -129,6 +138,7 @@ runs:
     - name: Export categories metadata
       shell: bash
       run: |
+        echo "::group::Export categories metadata"
         echo "=================================================="
         echo "EXPORTING CATEGORIES"
         echo "=================================================="
@@ -136,6 +146,7 @@ runs:
         python ${{ github.action_path }}/export_categories.py
         cat categories.json
         mv categories.json ${{ inputs.categories_output_dir }}
+        echo "::endgroup::"
         
     - name: Export documentation
       shell: bash
@@ -148,16 +159,22 @@ runs:
         ASSET_VERSION: ${{ inputs.asset_version }}
         OUTPUT_DIR: ${{ inputs.documentation_output_dir }}
       run: |
+        echo "::group::Export documentation"
+        
         echo "=================================================="
         echo "EXPORTING DOCUMENTATION"
         echo "=================================================="
         set -ex
         
-        python ${{ github.action_path }}/export_documentation.py       
+        python ${{ github.action_path }}/export_documentation.py
+        
+        echo "::endgroup::"
 
     - name: Check exported files and add to git
       shell: bash
       run: |
+        echo "::group::Check exported files and add to git"
+        
         set -ex
         
         echo "🔍 Checking for exported files and adding to git..."
@@ -215,13 +232,17 @@ runs:
             git push
           fi
         else
-          echo "🔍 Dry run mode enabled - skipping git commit and push"
+          echo "🔄 Dry run mode - skipping commit and push"
         fi
-
+        
+        echo "::endgroup::"
+        
     - name: Debug - Show directory structure and environment
       if: always()
       shell: bash
       run: |
+        echo "::group::Debug - Show directory structure and environment"
+        
         echo "=================================================="
         echo "🔍 DEBUG: FINAL SYSTEM STATE"
         echo "=================================================="
@@ -288,79 +309,7 @@ runs:
         echo ""
         echo "🔍 Debug complete!"
         
-#    - name: Move files to repository destination
-#      shell: bash
-#      run: |
-#        # Set documentation path, handling empty or '.' values
-#        DOC_PATH="${{ inputs.documentation-path }}"
-#        if [ "$DOC_PATH" = "." ] || [ -z "$DOC_PATH" ]; then
-#          DOC_FULL_PATH="${{ inputs.repository-destination }}/documentation"
-#        else
-#          DOC_FULL_PATH="${{ inputs.repository-destination }}/documentation/$DOC_PATH"
-#        fi
-#
-#        # Set categories path, handling empty or '.' values
-#        CAT_PATH="${{ inputs.categories-path }}"
-#        if [ "$CAT_PATH" = "." ] || [ -z "$CAT_PATH" ]; then
-#          CAT_FULL_PATH="${{ inputs.repository-destination }}"
-#        else
-#          CAT_FULL_PATH="${{ inputs.repository-destination }}/$CAT_PATH"
-#        fi
-#
-#        # Set specs path, handling empty or '.' values
-#        SPECS_PATH="${{ inputs.specs-path }}"
-#        if [ "$SPECS_PATH" = "." ] || [ -z "$SPECS_PATH" ]; then
-#          SPECS_FULL_PATH="${{ inputs.repository-destination }}"
-#        else
-#          SPECS_FULL_PATH="${{ inputs.repository-destination }}/$SPECS_PATH"
-#        fi
-#
-#        # Create destination directories
-#        mkdir -p "$DOC_FULL_PATH" "$CAT_FULL_PATH" "$SPECS_FULL_PATH"
-#
-#        # Move API specifications
-#        if ls *.yaml *.yml *.json 2>/dev/null; then
-#          echo "Moving API specifications to $SPECS_FULL_PATH"
-#          mv *.yaml *.yml *.json "$SPECS_FULL_PATH/" 2>/dev/null || true
-#        fi
-#
-#        # Move categories file
-#        if [ -f "categories.json" ]; then
-#          echo "Moving categories.json to $CAT_FULL_PATH"
-#          mv categories.json "$CAT_FULL_PATH/"
-#        fi
-#
-#        # Move documentation files
-#        if [ -d "documentation-export" ]; then
-#          echo "Moving documentation to $DOC_FULL_PATH"
-#          cp -r documentation-export/* "$DOC_FULL_PATH/" 2>/dev/null || true
-#          rm -rf documentation-export
-#        fi
-#
-#        # Clean up temporary directories
-#        rm -rf api-spec 2>/dev/null || true
-#
-#        echo "output-path=${{ inputs.repository-destination }}" >> $GITHUB_OUTPUT
-#
-#    - name: Commit and push changes
-#      shell: bash
-#      run: |
-#        git config --local user.email "action@github.com"
-#        git config --local user.name "GitHub Action"
-#        git add .
-#        if git diff --staged --quiet; then
-#          echo "No changes to commit"
-#        else
-#          git commit -m "Update API specs, categories, and documentation from MuleSoft Anypoint Exchange"
-#          git push
-#        fi
-#
-#    - name: Upload artifacts
-#      uses: actions/upload-artifact@v4
-#      with:
-#        name: mulesoft-api-specs
-#        path: ${{ inputs.repository-destination }}
-#        retention-days: 30
+        echo "::endgroup::"
 
 branding:
   icon: 'download'
