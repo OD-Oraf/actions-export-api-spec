@@ -6,7 +6,9 @@
 
 set -ex    # Exit on error, undefined variables, and pipe failures
 
-
+#set -a # automatically export all variables
+#source .env
+#set +a
 
 # Configure Credentials
 configure_credentials() {
@@ -18,6 +20,14 @@ configure_credentials() {
 }
 
 export_api_specs() {
+  # Check if EXPORT_DIR exists and create if not
+  if [[ ! -d "${EXPORT_DIR}" ]]; then
+    echo "📁 Creating export directory: ${EXPORT_DIR}"
+    mkdir -p "${EXPORT_DIR}"
+  else
+    echo "📁 Export directory already exists: ${EXPORT_DIR}"
+  fi
+  
   echo "📥 Downloading asset ${ASSET_ID}/${ASSET_VERSION} to ${EXPORT_DIR}..."
   anypoint-cli-v4 exchange:asset:download "${ASSET_ID}/${ASSET_VERSION}" ./"${EXPORT_DIR}"
 
