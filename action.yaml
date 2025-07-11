@@ -118,9 +118,12 @@ runs:
         echo " DOWNLOADING API SPECIFICATION FILE"
         echo "=================================================="
         set -ex
+        echo "::group::Expoirting API specs"
         
         chmod +x ${{ github.action_path }}/export-api.sh
         ${{ github.action_path }}/export-api.sh
+        
+        echo "::endgroup::"
         
         
     - name: Export categories metadata
