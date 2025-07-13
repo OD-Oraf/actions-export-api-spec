@@ -310,6 +310,17 @@ runs:
         echo "🔍 Debug complete!"
         
         echo "::endgroup::"
+        
+
+    - name: Generate Summary
+      if: always()
+      run: |
+        {
+          echo "## Build Summary"
+          echo "- **Status**: $([ $? -eq 0 ] && echo "✅ Success" || echo "❌ Failed")"
+          echo "- **Duration**: $((SECONDS / 60)) minutes"
+          echo "- **Commit**: ${{ github.sha }}"
+        } >> $GITHUB_STEP_SUMMARY
 
 branding:
   icon: 'download'
