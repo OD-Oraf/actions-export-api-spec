@@ -1,0 +1,23 @@
+name: Basic Workflow
+
+run-name: "Basic Workflow"
+
+on:
+  workflow_dispatch:
+    inputs:
+
+
+jobs:
+  basic-workflow:
+    name: Deploy to RTF (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: List repository contents
+        run: |
+          tree
+
